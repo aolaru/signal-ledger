@@ -141,8 +141,13 @@
         <p class="card-description"></p>
         <div class="card-actions">
           <a class="card-link" target="_blank" rel="noreferrer">Read article</a>
-          <button class="prefer-source-button" type="button">Prefer source</button>
-          <button class="hide-source-button" type="button">Hide source</button>
+          <div class="source-menu">
+            <button class="source-menu-button" type="button" aria-haspopup="true">Source</button>
+            <div class="source-menu-popover">
+              <button class="prefer-source-button" type="button">Prefer source</button>
+              <button class="hide-source-button" type="button">Hide source</button>
+            </div>
+          </div>
         </div>
       </article>
     </template>

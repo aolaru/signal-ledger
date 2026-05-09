@@ -116,6 +116,8 @@ a {
   flex-direction: column;
   justify-content: space-between;
   padding: 34px;
+  position: relative;
+  overflow: hidden;
   color: #fff;
   background:
     linear-gradient(120deg, rgba(8, 63, 53, 0.92), rgba(20, 24, 23, 0.58)),
@@ -123,6 +125,19 @@ a {
   background-size: cover;
   background-position: center;
   box-shadow: var(--shadow);
+}
+
+.lead-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 35, 30, 0.08), rgba(5, 35, 30, 0.42));
+  pointer-events: none;
+}
+
+.lead-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .eyebrow,
@@ -275,6 +290,8 @@ h3 {
   text-decoration: none;
   line-height: 1.45;
   overflow-wrap: anywhere;
+  font-size: 1.02rem;
+  font-weight: 700;
 }
 
 .briefing-list span {
@@ -535,7 +552,7 @@ h3 {
 
 .news-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -632,19 +649,68 @@ h3 {
   justify-content: space-between;
   gap: 10px;
   align-items: center;
+  position: relative;
 }
 
-.hide-source-button {
-  padding: 7px 9px;
-  color: var(--muted);
+.source-menu {
+  position: relative;
 }
 
+.source-menu-button,
+.hide-source-button,
 .prefer-source-button {
   padding: 7px 9px;
 }
 
+.source-menu-button {
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.source-menu-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  display: none;
+  min-width: 150px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 14px 32px rgba(20, 24, 23, 0.16);
+}
+
+.source-menu[data-open] .source-menu-popover {
+  display: grid;
+  gap: 4px;
+}
+
+.source-menu-popover button {
+  width: 100%;
+  text-align: left;
+}
+
 .card-link {
   flex: 0 0 auto;
+}
+
+.section-block .story-visual {
+  display: none;
+}
+
+.section-block .news-card {
+  min-height: 260px;
+}
+
+.section-block .source-visual {
+  margin-top: 0;
 }
 
 @media (max-width: 980px) {
@@ -736,8 +802,8 @@ h3 {
 
   .card-actions,
   .source-controls {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
   }
 
   .news-card {

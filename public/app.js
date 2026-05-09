@@ -175,8 +175,26 @@ function createCard(article) {
   const link = fragment.querySelector(".card-link");
   link.href = article.link;
 
+  const sourceMenu = fragment.querySelector(".source-menu");
+  const sourceMenuButton = sourceMenu.querySelector(".source-menu-button");
   const preferButton = fragment.querySelector(".prefer-source-button");
   preferButton.textContent = preferredSources.has(article.source) ? "Preferred" : "Prefer source";
+  sourceMenuButton.setAttribute("aria-label", `Source options for ${article.source}`);
+
+  sourceMenuButton.addEventListener("click", () => {
+    sourceMenu.toggleAttribute("data-open");
+  });
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (!sourceMenu.contains(event.target)) {
+        sourceMenu.removeAttribute("data-open");
+      }
+    },
+    { once: true },
+  );
+
   preferButton.addEventListener("click", () => {
     if (preferredSources.has(article.source)) {
       preferredSources.delete(article.source);
@@ -187,6 +205,7 @@ function createCard(article) {
 
     savePreferredSources();
     saveHiddenSources();
+    sourceMenu.removeAttribute("data-open");
     rerenderCurrentView();
   });
 
@@ -195,6 +214,7 @@ function createCard(article) {
     preferredSources.delete(article.source);
     saveHiddenSources();
     savePreferredSources();
+    sourceMenu.removeAttribute("data-open");
     rerenderCurrentView();
   });
 
@@ -282,7 +302,7 @@ function renderSections(sections) {
 
     const grid = document.createElement("div");
     grid.className = "news-grid";
-    renderArticleGrid(grid, getVisibleArticles(section.articles).slice(0, 4));
+    renderArticleGrid(grid, getVisibleArticles(section.articles).slice(0, 3));
 
     block.append(heading, grid);
     sectionsContainer.appendChild(block);
