@@ -428,7 +428,11 @@ export default {
       return handleApi(request, env, ctx);
     }
 
-    if (url.pathname.startsWith("/topic/")) {
+    if (
+      url.pathname.startsWith("/topic/") ||
+      url.pathname === "/about" ||
+      url.pathname === "/briefing/today"
+    ) {
       const indexUrl = new URL("/", url);
       return env.ASSETS.fetch(new Request(indexUrl, request));
     }

@@ -146,4 +146,13 @@ describe("Worker API", () => {
 
     assert.equal(response.status, 400);
   });
+
+  it("serves the SPA shell for client-side routes", async () => {
+    for (const path of ["/topic/markets", "/about", "/briefing/today"]) {
+      const response = await worker.fetch(new Request(`https://signal-ledger.test${path}`), env, ctx);
+
+      assert.equal(response.status, 200);
+      assert.equal(await response.text(), "asset");
+    }
+  });
 });
