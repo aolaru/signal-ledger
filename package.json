@@ -1,0 +1,17 @@
+{
+  "name": "testwebsite",
+  "version": "1.0.0",
+  "description": "Simple Google News website",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "fast-xml-parser": "^5.7.3"
+  }
+}

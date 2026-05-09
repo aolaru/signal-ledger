@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="A focused business, technology, markets, and world news briefing powered by Google News RSS."
+    />
+    <title>SignalLedger Briefing</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="SignalLedger home">
+          <span class="brand-mark">SL</span>
+          <span>SignalLedger</span>
+        </a>
+        <nav class="nav-tabs" aria-label="Briefing sections">
+          <a href="#business">Business</a>
+          <a href="#tech">Tech</a>
+          <a href="#markets">Markets</a>
+          <a href="#world">World</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="briefing-hero">
+          <div class="lead-panel">
+            <p class="eyebrow">Daily business briefing</p>
+            <h1>Business, tech, markets, and world power in one scan.</h1>
+            <div id="lead-story" class="lead-story" aria-live="polite"></div>
+          </div>
+
+          <aside class="side-rail" aria-label="Fast briefing">
+            <div class="rail-header">
+              <p class="section-label">Fast briefing</p>
+              <button id="refresh-button" class="icon-button" type="button" title="Refresh briefing">
+                Refresh
+              </button>
+            </div>
+            <ol id="briefing-list" class="briefing-list"></ol>
+          </aside>
+        </section>
+
+        <section class="market-strip" aria-label="Market pulse">
+          <article>
+            <span>US futures</span>
+            <strong>Pre-market focus</strong>
+          </article>
+          <article>
+            <span>Crypto</span>
+            <strong>Risk appetite</strong>
+          </article>
+          <article>
+            <span>Energy</span>
+            <strong>Oil and gas</strong>
+          </article>
+          <article>
+            <span>FX</span>
+            <strong>Dollar watch</strong>
+          </article>
+        </section>
+
+        <section class="search-section">
+          <div>
+            <p class="section-label">Follow a topic</p>
+            <h2 id="feed-title">Search briefing</h2>
+          </div>
+          <form id="search-form" class="search-bar">
+            <input
+              id="topic-input"
+              name="topic"
+              type="text"
+              placeholder="AI regulation, startups, Romania, China..."
+              autocomplete="off"
+            />
+            <button type="submit">Search</button>
+          </form>
+        </section>
+
+        <p id="status" class="status">Loading briefing...</p>
+        <section id="search-results" class="news-grid" aria-live="polite"></section>
+        <section id="sections" class="sections" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <template id="card-template">
+      <article class="news-card">
+        <div class="card-topline">
+          <p class="card-source"></p>
+          <time class="card-date"></time>
+        </div>
+        <h3 class="card-title"></h3>
+        <p class="why-label">Why it matters</p>
+        <p class="card-description"></p>
+        <a class="card-link" target="_blank" rel="noreferrer">Read article</a>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
