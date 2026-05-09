@@ -7,6 +7,12 @@
     "directory": "./public",
     "binding": "ASSETS"
   },
+  // To persist newsletter emails, create a KV namespace:
+  // npx wrangler kv namespace create NEWSLETTER_SIGNUPS
+  // Then add:
+  // "kv_namespaces": [
+  //   { "binding": "NEWSLETTER_SIGNUPS", "id": "your-production-kv-id" }
+  // ],
   "observability": {
     "enabled": true
   }

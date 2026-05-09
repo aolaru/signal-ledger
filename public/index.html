@@ -35,6 +35,14 @@
       </header>
 
       <main>
+        <section class="market-pulse" aria-label="Market pulse">
+          <div class="pulse-header">
+            <p class="section-label">Market pulse</p>
+            <span id="market-status">Loading live data...</span>
+          </div>
+          <div id="market-strip" class="market-strip"></div>
+        </section>
+
         <section class="briefing-hero">
           <div class="lead-panel">
             <p class="eyebrow">Daily business briefing</p>
@@ -53,18 +61,39 @@
           </aside>
         </section>
 
-        <section class="market-pulse" aria-label="Market pulse">
-          <div class="pulse-header">
-            <p class="section-label">Market pulse</p>
-            <span id="market-status">Loading live data...</span>
+        <section class="topic-bar" aria-label="Featured topics">
+          <a href="/topic/artificial-intelligence">AI</a>
+          <a href="/topic/markets">Markets</a>
+          <a href="/topic/romania">Romania</a>
+          <a href="/topic/europe">Europe</a>
+          <a href="/topic/startups">Startups</a>
+          <a href="/topic/energy">Energy</a>
+        </section>
+
+        <section class="newsletter-panel">
+          <div>
+            <p class="section-label">Morning briefing</p>
+            <h2>Get SignalLedger by email.</h2>
           </div>
-          <div id="market-strip" class="market-strip"></div>
+          <form id="newsletter-form" class="newsletter-form">
+            <input
+              id="newsletter-email"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
+            />
+            <button type="submit">Join</button>
+          </form>
+          <p id="newsletter-status" class="newsletter-status" aria-live="polite"></p>
         </section>
 
         <section class="search-section">
           <div>
             <p class="section-label">Follow a topic</p>
             <h2 id="feed-title">Search briefing</h2>
+            <p id="last-updated" class="last-updated">Last update: pending</p>
           </div>
           <form id="search-form" class="search-bar">
             <input
@@ -90,7 +119,10 @@
 
     <template id="card-template">
       <article class="news-card">
-        <div class="source-visual">
+        <div class="story-visual">
+          <img class="card-image" alt="" loading="lazy" />
+        </div>
+        <div class="source-visual" aria-hidden="true">
           <img class="source-logo" alt="" loading="lazy" />
         </div>
         <div class="card-topline">

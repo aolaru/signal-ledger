@@ -44,6 +44,42 @@ const marketSymbols = [
   { key: "eurusd", label: "EUR/USD", symbol: "eurusd" },
 ];
 
+const fallbackMarkets = [
+  { key: "spx", label: "S&P 500", symbol: "^SPX", value: 7398.9, percentChange: 0.49, currency: "" },
+  { key: "nasdaq", label: "Nasdaq", symbol: "^NDQ", value: 26247.08, percentChange: 1.11, currency: "" },
+  { key: "btc", label: "Bitcoin", symbol: "BTCUSD", value: 80142.3, percentChange: 0.51, currency: "$" },
+  { key: "oil", label: "WTI oil", symbol: "CL.F", value: 95.42, percentChange: -2.88, currency: "$" },
+  { key: "gold", label: "Gold", symbol: "GC.F", value: 4730.7, percentChange: 1.03, currency: "$" },
+  { key: "eurusd", label: "EUR/USD", symbol: "EURUSD", value: 1.17803, percentChange: 0.48, currency: "" },
+];
+
+const visualPresets = [
+  {
+    match: /romania|bucharest|cluj|cee/i,
+    url: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    match: /europe|eu\b|brussels|eurozone/i,
+    url: "https://images.unsplash.com/photo-1491557345352-5929e343eb89?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    match: /market|stock|economy|fed|inflation|oil|gold|bitcoin|crypto/i,
+    url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    match: /tech|ai|artificial intelligence|startup|software|chip/i,
+    url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    match: /world|geopolitics|china|iran|russia|war|defense/i,
+    url: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    match: /business|company|earnings|deal|ceo/i,
+    url: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80",
+  },
+];
+
 function stripHtml(value = "") {
   return value
     .replace(/&nbsp;/g, " ")
@@ -59,6 +95,14 @@ function buildFeedUrl(topic) {
 
   const query = encodeURIComponent(topic);
   return `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
+}
+
+function getVisualUrl(topic, title = "") {
+  const haystack = `${topic} ${title}`;
+  return (
+    visualPresets.find((preset) => preset.match.test(haystack))?.url ||
+    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80"
+  );
 }
 
 function readCache(cache, key) {
@@ -148,6 +192,7 @@ async function fetchArticles(topic, limit = 12) {
         imageUrl: sourceUrl
           ? `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(sourceUrl)}&sz=128`
           : "/favicon.svg",
+        visualUrl: getVisualUrl(topic, item.title || ""),
         description: stripHtml(item.description || ""),
       };
 
@@ -226,10 +271,29 @@ async function fetchMarkets() {
     }
   }
 
-  return markets;
+  if (markets.length === marketSymbols.length) {
+    return markets;
+  }
+
+  const liveKeys = new Set(markets.map((market) => market.key));
+  const fallbackUpdatedAt = new Date().toISOString();
+  return [
+    ...markets,
+    ...fallbackMarkets
+      .filter((market) => !liveKeys.has(market.key))
+      .map((market) => ({
+        ...market,
+        updatedAt: fallbackUpdatedAt,
+        isFallback: true,
+      })),
+  ];
 }
 
 app.use(express.static(path.join(__dirname, "public")));
+
+app.get(/^\/topic\/.+/, (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 app.get("/api/briefing", async (_req, res) => {
   try {
@@ -285,6 +349,20 @@ app.get("/api/markets", async (_req, res) => {
       details: error.message,
     });
   }
+});
+
+app.post("/api/subscribe", express.json(), (req, res) => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ error: "Enter a valid email address." });
+    return;
+  }
+
+  res.json({
+    ok: true,
+    message: "Subscription captured for the prototype.",
+  });
 });
 
 app.get("/api/news", async (req, res) => {
