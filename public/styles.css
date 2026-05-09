@@ -3,7 +3,8 @@
   --surface: #ffffff;
   --surface-soft: #eef2ef;
   --ink: #141817;
-  --muted: #68716d;
+  --muted: #4f5a55;
+  --muted-soft: #68756f;
   --line: #d9ded9;
   --accent: #0e6b58;
   --accent-strong: #083f35;
@@ -20,6 +21,8 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: "Space Grotesk", sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
   color: var(--ink);
   background:
     linear-gradient(90deg, rgba(20, 24, 23, 0.035) 1px, transparent 1px),
@@ -145,13 +148,13 @@ h2,
 h3 {
   margin: 0;
   font-family: "Source Serif 4", serif;
-  line-height: 1;
+  line-height: 1.08;
 }
 
 h1 {
   max-width: 740px;
   margin-top: 14px;
-  font-size: clamp(3.4rem, 4.8rem, 5.2rem);
+  font-size: clamp(3.25rem, 4.6rem, 5rem);
   letter-spacing: 0;
 }
 
@@ -160,7 +163,7 @@ h2 {
 }
 
 h3 {
-  font-size: 1.3rem;
+  font-size: 1.38rem;
 }
 
 .lead-story {
@@ -185,13 +188,15 @@ h3 {
 }
 
 .lead-story h2 {
-  font-size: clamp(2rem, 3.6rem, 4rem);
+  font-size: clamp(2rem, 3.3rem, 3.7rem);
+  line-height: 1.04;
 }
 
 .lead-story p {
   max-width: 66ch;
-  color: rgba(255, 255, 255, 0.82);
-  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.05rem;
+  line-height: 1.62;
 }
 
 .lead-link,
@@ -212,7 +217,7 @@ h3 {
 .side-rail {
   min-width: 0;
   min-height: 520px;
-  padding: 22px;
+  padding: 24px;
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
@@ -241,29 +246,43 @@ h3 {
 
 .briefing-list {
   display: grid;
-  gap: 0;
+  gap: 2px;
   margin: 0;
   padding: 0;
-  list-style-position: inside;
+  list-style: none;
+  counter-reset: briefing;
 }
 
 .briefing-list li {
-  padding: 13px 0;
+  position: relative;
+  padding: 15px 0 15px 34px;
   border-top: 1px solid var(--line);
+  counter-increment: briefing;
+}
+
+.briefing-list li::before {
+  content: counter(briefing, decimal-leading-zero);
+  position: absolute;
+  top: 17px;
+  left: 0;
+  color: var(--muted-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .briefing-list a {
-  display: inline;
+  display: block;
   text-decoration: none;
-  line-height: 1.35;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
 .briefing-list span {
   display: block;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 0.82rem;
+  margin-top: 7px;
+  color: var(--muted-soft);
+  font-size: 0.84rem;
+  line-height: 1.35;
 }
 
 .market-pulse {
@@ -277,7 +296,7 @@ h3 {
 }
 
 .pulse-header span {
-  color: var(--muted);
+  color: var(--muted-soft);
   font-size: 0.84rem;
 }
 
@@ -297,7 +316,7 @@ h3 {
 .market-card span {
   display: block;
   margin-bottom: 5px;
-  color: var(--muted);
+  color: var(--muted-soft);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -366,7 +385,7 @@ h3 {
   max-width: 74ch;
   margin: 0;
   color: var(--muted);
-  line-height: 1.5;
+  line-height: 1.62;
 }
 
 .newsletter-panel {
@@ -455,7 +474,7 @@ h3 {
 
 .status {
   min-height: 18px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .last-updated {
@@ -479,7 +498,7 @@ h3 {
 }
 
 .source-controls span {
-  color: var(--muted);
+  color: var(--muted-soft);
   font-size: 0.9rem;
 }
 
@@ -502,22 +521,22 @@ h3 {
 
 .sections {
   display: grid;
-  gap: 32px;
+  gap: 42px;
 }
 
 .section-block {
-  padding-top: 28px;
+  padding-top: 34px;
   border-top: 1px solid var(--line);
 }
 
 .section-block h2 {
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .news-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 18px;
 }
 
 .news-grid:empty {
@@ -526,11 +545,11 @@ h3 {
 
 .news-card {
   min-width: 0;
-  min-height: 270px;
+  min-height: 330px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
+  gap: 14px;
+  padding: 20px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface);
@@ -538,8 +557,8 @@ h3 {
 }
 
 .story-visual {
-  height: 116px;
-  margin: -18px -18px 0;
+  height: 126px;
+  margin: -20px -20px 0;
   overflow: hidden;
   border-bottom: 1px solid var(--line);
   border-radius: 6px 6px 0 0;
@@ -578,18 +597,19 @@ h3 {
 
 .card-date {
   flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 0.78rem;
+  color: var(--muted-soft);
+  font-size: 0.8rem;
 }
 
 .card-title {
-  line-height: 1.08;
+  line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
 .why-label {
   margin-top: 2px;
   color: var(--warning);
+  letter-spacing: 0.06em;
 }
 
 .cluster-label {
@@ -603,7 +623,8 @@ h3 {
 .card-description {
   margin: 0;
   color: var(--muted);
-  line-height: 1.45;
+  font-size: 0.98rem;
+  line-height: 1.62;
 }
 
 .card-actions {
@@ -667,13 +688,19 @@ h3 {
   }
 
   h1 {
-    font-size: 3rem;
+    font-size: 2.7rem;
+    line-height: 1.08;
     overflow-wrap: anywhere;
   }
 
   h2,
-  h3,
+  h3 {
+    line-height: 1.14;
+    overflow-wrap: anywhere;
+  }
+
   p {
+    line-height: 1.58;
     overflow-wrap: anywhere;
   }
 
@@ -687,6 +714,7 @@ h3 {
 
   .news-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .search-bar {
@@ -710,6 +738,14 @@ h3 {
   .source-controls {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .news-card {
+    min-height: unset;
+  }
+
+  .card-description {
+    font-size: 1rem;
   }
 }
 
