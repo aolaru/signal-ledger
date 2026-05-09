@@ -1,30 +1,9 @@
-const express = require("express");
-const path = require("path");
-const { XMLParser } = require("fast-xml-parser");
+import { XMLParser } from "fast-xml-parser";
 
-const app = express();
-const port = process.env.PORT || 3000;
 const parser = new XMLParser({
   ignoreAttributes: false,
   trimValues: true,
 });
-
-const newsCache = new Map();
-const marketCache = new Map();
-const newsCacheMs = 10 * 60 * 1000;
-const marketCacheMs = 60 * 1000;
-const trustedSourceBoosts = new Map([
-  ["Reuters", 40],
-  ["AP News", 36],
-  ["BBC", 32],
-  ["CNBC", 28],
-  ["Bloomberg.com", 28],
-  ["The Wall Street Journal", 26],
-  ["Financial Times", 26],
-  ["The New York Times", 20],
-  ["The Guardian", 16],
-  ["Business Insider", 14],
-]);
 
 const sections = [
   { key: "business", label: "Business", query: "business economy companies" },
@@ -44,6 +23,45 @@ const marketSymbols = [
   { key: "eurusd", label: "EUR/USD", symbol: "eurusd" },
 ];
 
+const trustedSourceBoosts = new Map([
+  ["Reuters", 40],
+  ["AP News", 36],
+  ["BBC", 32],
+  ["CNBC", 28],
+  ["Bloomberg.com", 28],
+  ["The Wall Street Journal", 26],
+  ["Financial Times", 26],
+  ["The New York Times", 20],
+  ["The Guardian", 16],
+  ["Business Insider", 14],
+]);
+
+function jsonResponse(data, status = 200, cacheSeconds = 0) {
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+  };
+
+  if (cacheSeconds > 0) {
+    headers["Cache-Control"] = `public, max-age=${cacheSeconds}`;
+  }
+
+  return new Response(JSON.stringify(data), { status, headers });
+}
+
+async function cachedJson(request, ctx, cacheSeconds, producer) {
+  const cache = caches.default;
+  const cacheKey = new Request(request.url, { method: "GET" });
+  const cached = await cache.match(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  const response = jsonResponse(await producer(), 200, cacheSeconds);
+  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
+}
+
 function stripHtml(value = "") {
   return value
     .replace(/&nbsp;/g, " ")
@@ -59,23 +77,6 @@ function buildFeedUrl(topic) {
 
   const query = encodeURIComponent(topic);
   return `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
-}
-
-function readCache(cache, key) {
-  const cached = cache.get(key);
-  if (!cached || Date.now() - cached.createdAt > cached.ttl) {
-    return null;
-  }
-
-  return cached.value;
-}
-
-function writeCache(cache, key, value, ttl) {
-  cache.set(key, {
-    createdAt: Date.now(),
-    ttl,
-    value,
-  });
 }
 
 function getItems(channel) {
@@ -115,12 +116,6 @@ function getWhyItMatters(article, fallbackTopic) {
 }
 
 async function fetchArticles(topic, limit = 12) {
-  const cacheKey = `${topic || "top"}:${limit}`;
-  const cached = readCache(newsCache, cacheKey);
-  if (cached) {
-    return cached;
-  }
-
   const response = await fetch(buildFeedUrl(topic), {
     headers: {
       "User-Agent": "Mozilla/5.0",
@@ -135,7 +130,7 @@ async function fetchArticles(topic, limit = 12) {
   const parsed = parser.parse(xml);
   const channel = parsed?.rss?.channel;
 
-  const articles = getItems(channel)
+  return getItems(channel)
     .slice(0, Math.max(limit * 2, limit))
     .map((item) => {
       const sourceUrl = item.source?.["@_url"] || "";
@@ -158,9 +153,6 @@ async function fetchArticles(topic, limit = 12) {
     })
     .sort((first, second) => scoreArticle(second) - scoreArticle(first))
     .slice(0, limit);
-
-  writeCache(newsCache, cacheKey, articles, newsCacheMs);
-  return articles;
 }
 
 function parseMarketCsv(csv, market) {
@@ -193,11 +185,6 @@ function parseMarketCsv(csv, market) {
 }
 
 async function fetchMarket(market) {
-  const cached = readCache(marketCache, market.key);
-  if (cached) {
-    return cached;
-  }
-
   const url = `https://stooq.com/q/l/?s=${encodeURIComponent(market.symbol)}&f=sd2t2ohlcvn&h&e=csv`;
   const response = await fetch(url, {
     headers: {
@@ -209,10 +196,7 @@ async function fetchMarket(market) {
     throw new Error(`Market request failed with ${response.status}`);
   }
 
-  const csv = await response.text();
-  const data = parseMarketCsv(csv, market);
-  writeCache(marketCache, market.key, data, marketCacheMs);
-  return data;
+  return parseMarketCsv(await response.text(), market);
 }
 
 async function fetchMarkets() {
@@ -229,81 +213,84 @@ async function fetchMarkets() {
   return markets;
 }
 
-app.use(express.static(path.join(__dirname, "public")));
+async function buildBriefing() {
+  const [topStories, markets, ...sectionFeeds] = await Promise.all([
+    fetchArticles("business technology markets geopolitics", 10),
+    fetchMarkets(),
+    ...sections.map((section) => fetchArticles(section.query, 8)),
+  ]);
 
-app.get("/api/briefing", async (_req, res) => {
-  try {
-    const [topStories, markets, ...sectionFeeds] = await Promise.all([
-      fetchArticles("business technology markets geopolitics", 10),
-      fetchMarkets(),
-      ...sections.map((section) => fetchArticles(section.query, 8)),
-    ]);
+  const seen = new Set(topStories.map(getArticleId));
+  const sectionData = sections.map((section, index) => {
+    const articles = sectionFeeds[index].filter((article) => {
+      const id = getArticleId(article);
+      if (seen.has(id)) {
+        return false;
+      }
 
-    const seen = new Set(topStories.map(getArticleId));
-    const sectionData = sections.map((section, index) => {
-      const articles = sectionFeeds[index].filter((article) => {
-        const id = getArticleId(article);
-        if (seen.has(id)) {
-          return false;
-        }
-
-        seen.add(id);
-        return true;
-      });
-
-      return {
-        key: section.key,
-        label: section.label,
-        articles,
-      };
+      seen.add(id);
+      return true;
     });
 
-    res.json({
-      generatedAt: new Date().toISOString(),
-      lead: topStories[0],
-      fastBriefing: topStories.slice(1, 9),
-      markets,
-      sections: sectionData,
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: "Could not load the briefing right now.",
-      details: error.message,
-    });
-  }
-});
-
-app.get("/api/markets", async (_req, res) => {
-  try {
-    res.json({
-      generatedAt: new Date().toISOString(),
-      markets: await fetchMarkets(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: "Could not load market data right now.",
-      details: error.message,
-    });
-  }
-});
-
-app.get("/api/news", async (req, res) => {
-  try {
-    const topic = typeof req.query.topic === "string" ? req.query.topic.trim() : "";
-    const articles = await fetchArticles(topic, 12);
-
-    res.json({
-      topic: topic || "Top stories",
+    return {
+      key: section.key,
+      label: section.label,
       articles,
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: "Could not load Google News right now.",
-      details: error.message,
-    });
-  }
-});
+    };
+  });
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+  return {
+    generatedAt: new Date().toISOString(),
+    lead: topStories[0],
+    fastBriefing: topStories.slice(1, 9),
+    markets,
+    sections: sectionData,
+  };
+}
+
+async function handleApi(request, ctx) {
+  const url = new URL(request.url);
+
+  try {
+    if (url.pathname === "/api/briefing") {
+      return cachedJson(request, ctx, 600, buildBriefing);
+    }
+
+    if (url.pathname === "/api/markets") {
+      return cachedJson(request, ctx, 60, async () => ({
+        generatedAt: new Date().toISOString(),
+        markets: await fetchMarkets(),
+      }));
+    }
+
+    if (url.pathname === "/api/news") {
+      const topic = url.searchParams.get("topic")?.trim() || "";
+      return cachedJson(request, ctx, 600, async () => ({
+        topic: topic || "Top stories",
+        articles: await fetchArticles(topic, 12),
+      }));
+    }
+
+    return jsonResponse({ error: "Not found" }, 404);
+  } catch (error) {
+    return jsonResponse(
+      {
+        error: "Could not load data right now.",
+        details: error.message,
+      },
+      500,
+    );
+  }
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/")) {
+      return handleApi(request, ctx);
+    }
+
+    return env.ASSETS.fetch(request);
+  },
+};

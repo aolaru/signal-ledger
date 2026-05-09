@@ -29,6 +29,8 @@
           <a href="#tech">Tech</a>
           <a href="#markets">Markets</a>
           <a href="#world">World</a>
+          <a href="#europe">Europe</a>
+          <a href="#romania">Romania</a>
         </nav>
       </header>
 
@@ -51,23 +53,12 @@
           </aside>
         </section>
 
-        <section class="market-strip" aria-label="Market pulse">
-          <article>
-            <span>US futures</span>
-            <strong>Pre-market focus</strong>
-          </article>
-          <article>
-            <span>Crypto</span>
-            <strong>Risk appetite</strong>
-          </article>
-          <article>
-            <span>Energy</span>
-            <strong>Oil and gas</strong>
-          </article>
-          <article>
-            <span>FX</span>
-            <strong>Dollar watch</strong>
-          </article>
+        <section class="market-pulse" aria-label="Market pulse">
+          <div class="pulse-header">
+            <p class="section-label">Market pulse</p>
+            <span id="market-status">Loading live data...</span>
+          </div>
+          <div id="market-strip" class="market-strip"></div>
         </section>
 
         <section class="search-section">
@@ -88,6 +79,10 @@
         </section>
 
         <p id="status" class="status">Loading briefing...</p>
+        <div id="source-controls" class="source-controls" hidden>
+          <span id="hidden-count"></span>
+          <button id="reset-sources" type="button">Reset sources</button>
+        </div>
         <section id="search-results" class="news-grid" aria-live="polite"></section>
         <section id="sections" class="sections" aria-live="polite"></section>
       </main>
@@ -95,6 +90,9 @@
 
     <template id="card-template">
       <article class="news-card">
+        <div class="source-visual">
+          <img class="source-logo" alt="" loading="lazy" />
+        </div>
         <div class="card-topline">
           <p class="card-source"></p>
           <time class="card-date"></time>
@@ -102,7 +100,10 @@
         <h3 class="card-title"></h3>
         <p class="why-label">Why it matters</p>
         <p class="card-description"></p>
-        <a class="card-link" target="_blank" rel="noreferrer">Read article</a>
+        <div class="card-actions">
+          <a class="card-link" target="_blank" rel="noreferrer">Read article</a>
+          <button class="hide-source-button" type="button">Hide source</button>
+        </div>
       </article>
     </template>
 
