@@ -36,12 +36,12 @@ const sections = [
 ];
 
 const marketSymbols = [
-  { key: "spx", label: "S&P 500", symbol: "^spx" },
-  { key: "nasdaq", label: "Nasdaq", symbol: "^ndq" },
-  { key: "btc", label: "Bitcoin", symbol: "btcusd", currency: "$" },
-  { key: "oil", label: "WTI oil", symbol: "cl.f", currency: "$" },
-  { key: "gold", label: "Gold", symbol: "gc.f", currency: "$" },
-  { key: "eurusd", label: "EUR/USD", symbol: "eurusd" },
+  { key: "spx", label: "S&P 500", symbols: ["^spx", "%5Espx"] },
+  { key: "nasdaq", label: "Nasdaq", symbols: ["^ndq", "%5Endq"] },
+  { key: "btc", label: "Bitcoin", symbols: ["btcusd"], currency: "$" },
+  { key: "oil", label: "WTI oil", symbols: ["cl.f"], currency: "$" },
+  { key: "gold", label: "Gold", symbols: ["gc.f"], currency: "$" },
+  { key: "eurusd", label: "EUR/USD", symbols: ["eurusd"] },
 ];
 
 const fallbackMarkets = [
@@ -103,6 +103,23 @@ function getVisualUrl(topic, title = "") {
     visualPresets.find((preset) => preset.match.test(haystack))?.url ||
     "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80"
   );
+}
+
+function decodeEntities(value = "") {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function extractClusterSources(description = "", primarySource = "") {
+  const sources = [...description.matchAll(/<font[^>]*>(.*?)<\/font>/gi)]
+    .map((match) => decodeEntities(stripHtml(match[1])))
+    .filter(Boolean);
+
+  return [...new Set([primarySource, ...sources].filter(Boolean))];
 }
 
 function readCache(cache, key) {
@@ -183,16 +200,20 @@ async function fetchArticles(topic, limit = 12) {
     .slice(0, Math.max(limit * 2, limit))
     .map((item) => {
       const sourceUrl = item.source?.["@_url"] || "";
+      const source = item.source?.["#text"] || item.source || "Google News";
+      const clusterSources = extractClusterSources(item.description || "", source);
       const article = {
         title: item.title || "Untitled article",
         link: item.link || "#",
         publishedAt: item.pubDate || "",
-        source: item.source?.["#text"] || item.source || "Google News",
+        source,
         sourceUrl,
         imageUrl: sourceUrl
           ? `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(sourceUrl)}&sz=128`
           : "/favicon.svg",
         visualUrl: getVisualUrl(topic, item.title || ""),
+        clusterSources,
+        clusterCount: clusterSources.length,
         description: stripHtml(item.description || ""),
       };
 
@@ -219,7 +240,7 @@ function parseMarketCsv(csv, market) {
       : 0;
 
   if (!closeValue || date === "N/D") {
-    throw new Error(`No market data for ${market.symbol}`);
+    throw new Error(`No market data for ${market.key}`);
   }
 
   return {
@@ -234,6 +255,8 @@ function parseMarketCsv(csv, market) {
     percentChange,
     currency: market.currency || "",
     updatedAt: `${date}T${time.replace(/:00$/, ":00")}Z`,
+    provider: "stooq",
+    isFallback: false,
   };
 }
 
@@ -243,21 +266,33 @@ async function fetchMarket(market) {
     return cached;
   }
 
-  const url = `https://stooq.com/q/l/?s=${encodeURIComponent(market.symbol)}&f=sd2t2ohlcvn&h&e=csv`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-    },
-  });
+  const errors = [];
 
-  if (!response.ok) {
-    throw new Error(`Market request failed with ${response.status}`);
+  for (const symbol of market.symbols) {
+    const symbolParam = symbol.startsWith("%") ? symbol : encodeURIComponent(symbol);
+    const url = `https://stooq.com/q/l/?s=${symbolParam}&f=sd2t2ohlcvn&h&e=csv`;
+    const response = await fetch(url, {
+      headers: {
+        "Accept": "text/csv,*/*",
+        "User-Agent": "Mozilla/5.0 SignalLedger/1.0",
+      },
+    });
+
+    if (!response.ok) {
+      errors.push(`${symbol}: ${response.status}`);
+      continue;
+    }
+
+    try {
+      const data = parseMarketCsv(await response.text(), market);
+      writeCache(marketCache, market.key, data, marketCacheMs);
+      return data;
+    } catch (error) {
+      errors.push(`${symbol}: ${error.message}`);
+    }
   }
 
-  const csv = await response.text();
-  const data = parseMarketCsv(csv, market);
-  writeCache(marketCache, market.key, data, marketCacheMs);
-  return data;
+  throw new Error(errors.join("; ") || `No market data for ${market.key}`);
 }
 
 async function fetchMarkets() {
@@ -285,6 +320,7 @@ async function fetchMarkets() {
         ...market,
         updatedAt: fallbackUpdatedAt,
         isFallback: true,
+        provider: "fallback-snapshot",
       })),
   ];
 }

@@ -17,11 +17,16 @@ const resetSources = document.getElementById("reset-sources");
 const newsletterForm = document.getElementById("newsletter-form");
 const newsletterEmail = document.getElementById("newsletter-email");
 const newsletterStatus = document.getElementById("newsletter-status");
+const topicPanel = document.getElementById("topic-panel");
+const topicTitle = document.getElementById("topic-title");
+const topicDescription = document.getElementById("topic-description");
+const metaDescription = document.querySelector("meta[name='description']");
 
 let currentTopic = "";
 let latestBriefing = null;
 let latestSearchArticles = [];
 let hiddenSources = new Set(JSON.parse(localStorage.getItem("hiddenSources") || "[]"));
+let preferredSources = new Set(JSON.parse(localStorage.getItem("preferredSources") || "[]"));
 const savedEmail = localStorage.getItem("newsletterEmail");
 const apiVersion = "2026-05-09-briefing-v2";
 const newsRefreshMs = 10 * 60 * 1000;
@@ -67,17 +72,79 @@ function formatMarketValue(market) {
 }
 
 function getVisibleArticles(articles) {
-  return articles.filter((article) => !hiddenSources.has(article.source));
+  return articles
+    .filter((article) => !hiddenSources.has(article.source))
+    .sort((first, second) => {
+      const firstPreferred = preferredSources.has(first.source) ? 1 : 0;
+      const secondPreferred = preferredSources.has(second.source) ? 1 : 0;
+      return secondPreferred - firstPreferred;
+    });
 }
 
 function saveHiddenSources() {
   localStorage.setItem("hiddenSources", JSON.stringify([...hiddenSources]));
 }
 
+function savePreferredSources() {
+  localStorage.setItem("preferredSources", JSON.stringify([...preferredSources]));
+}
+
 function updateSourceControls() {
-  const count = hiddenSources.size;
-  sourceControls.hidden = count === 0;
-  hiddenCount.textContent = count === 1 ? "1 source hidden" : `${count} sources hidden`;
+  const hidden = hiddenSources.size;
+  const preferred = preferredSources.size;
+  sourceControls.hidden = hidden === 0 && preferred === 0;
+  hiddenCount.textContent = `${hidden} hidden · ${preferred} preferred`;
+}
+
+function humanizeTopic(topic) {
+  return topic
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function getTopicCopy(topic) {
+  const topicName = humanizeTopic(topic);
+  const lower = topic.toLowerCase();
+  const descriptions = {
+    "artificial intelligence":
+      "AI regulation, model launches, chip supply, enterprise adoption, and the companies shaping the market.",
+    markets:
+      "Market-moving headlines across equities, rates, crypto, commodities, and macro policy.",
+    romania:
+      "Romanian business, technology, politics, and regional economy stories in a wider European context.",
+    europe:
+      "European business, policy, markets, and geopolitics with emphasis on decisions that shape the region.",
+    startups:
+      "Funding, product launches, founders, venture capital, and startup market signals worth tracking.",
+    energy:
+      "Oil, gas, power, renewables, policy, and infrastructure stories that affect markets and strategy.",
+  };
+
+  return {
+    title: `${topicName} Briefing`,
+    description:
+      descriptions[lower] ||
+      `Latest ${topicName} headlines, sources, and market context collected into a fast SignalLedger briefing.`,
+  };
+}
+
+function updateTopicExperience(topic = "") {
+  if (!topic) {
+    topicPanel.hidden = true;
+    document.title = "SignalLedger Briefing";
+    metaDescription.content =
+      "A focused business, technology, markets, and world news briefing powered by Google News RSS.";
+    return;
+  }
+
+  const copy = getTopicCopy(topic);
+  topicPanel.hidden = false;
+  topicTitle.textContent = copy.title;
+  topicDescription.textContent = copy.description;
+  document.title = `${copy.title} | SignalLedger`;
+  metaDescription.content = copy.description;
 }
 
 function createCard(article) {
@@ -97,12 +164,37 @@ function createCard(article) {
     article.whyItMatters || article.description || "This story is developing.";
   fragment.querySelector(".card-date").textContent = formatDate(article.publishedAt);
 
+  const clusterLabel = fragment.querySelector(".cluster-label");
+  if (article.clusterCount > 1) {
+    const sources = article.clusterSources?.slice(0, 3).join(", ");
+    clusterLabel.textContent = `${article.clusterCount} sources tracking this: ${sources}`;
+  } else {
+    clusterLabel.remove();
+  }
+
   const link = fragment.querySelector(".card-link");
   link.href = article.link;
 
+  const preferButton = fragment.querySelector(".prefer-source-button");
+  preferButton.textContent = preferredSources.has(article.source) ? "Preferred" : "Prefer source";
+  preferButton.addEventListener("click", () => {
+    if (preferredSources.has(article.source)) {
+      preferredSources.delete(article.source);
+    } else {
+      preferredSources.add(article.source);
+      hiddenSources.delete(article.source);
+    }
+
+    savePreferredSources();
+    saveHiddenSources();
+    rerenderCurrentView();
+  });
+
   fragment.querySelector(".hide-source-button").addEventListener("click", () => {
     hiddenSources.add(article.source);
+    preferredSources.delete(article.source);
     saveHiddenSources();
+    savePreferredSources();
     rerenderCurrentView();
   });
 
@@ -309,6 +401,7 @@ async function loadBriefing() {
   searchResults.innerHTML = "";
   latestSearchArticles = [];
   currentTopic = "";
+  updateTopicExperience("");
 
   try {
     const response = await fetch(`/api/briefing?v=${apiVersion}`);
@@ -333,6 +426,7 @@ async function loadBriefing() {
 
 async function loadSearch(topic = "") {
   currentTopic = topic.trim();
+  updateTopicExperience(currentTopic);
   statusText.textContent = "Searching...";
   searchResults.innerHTML = "";
 
@@ -383,7 +477,9 @@ refreshButton.addEventListener("click", () => {
 
 resetSources.addEventListener("click", () => {
   hiddenSources = new Set();
+  preferredSources = new Set();
   saveHiddenSources();
+  savePreferredSources();
   rerenderCurrentView();
 });
 

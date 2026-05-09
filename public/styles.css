@@ -48,6 +48,7 @@ a {
 .source-controls,
 .card-actions,
 .topic-bar,
+.topic-panel,
 .newsletter-panel,
 .newsletter-form {
   display: flex;
@@ -343,6 +344,31 @@ h3 {
   background: var(--surface-soft);
 }
 
+.topic-panel {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 24px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.topic-panel[hidden] {
+  display: none;
+}
+
+.topic-panel h2 {
+  font-size: 2.4rem;
+}
+
+.topic-panel p:last-child {
+  max-width: 74ch;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .newsletter-panel {
   justify-content: space-between;
   gap: 18px;
@@ -458,7 +484,8 @@ h3 {
 }
 
 .source-controls button,
-.hide-source-button {
+.hide-source-button,
+.prefer-source-button {
   border: 0;
   border-radius: 4px;
   font: inherit;
@@ -565,6 +592,14 @@ h3 {
   color: var(--warning);
 }
 
+.cluster-label {
+  margin: -4px 0 0;
+  color: var(--accent-strong);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .card-description {
   margin: 0;
   color: var(--muted);
@@ -581,6 +616,10 @@ h3 {
 .hide-source-button {
   padding: 7px 9px;
   color: var(--muted);
+}
+
+.prefer-source-button {
+  padding: 7px 9px;
 }
 
 .card-link {
