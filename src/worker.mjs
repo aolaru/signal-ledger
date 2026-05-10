@@ -430,6 +430,7 @@ export default {
 
     if (
       url.pathname.startsWith("/topic/") ||
+      url.pathname.startsWith("/story/") ||
       url.pathname === "/about" ||
       url.pathname === "/briefing/today"
     ) {

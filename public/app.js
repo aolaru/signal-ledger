@@ -23,11 +23,20 @@ const topicDescription = document.getElementById("topic-description");
 const metaDescription = document.querySelector("meta[name='description']");
 const homeView = document.getElementById("home-view");
 const todayView = document.getElementById("today-view");
+const storyView = document.getElementById("story-view");
 const aboutView = document.getElementById("about-view");
 const todaySummary = document.getElementById("today-summary");
 const todayLead = document.getElementById("today-lead");
 const todayGrid = document.getElementById("today-grid");
 const navLinks = document.querySelectorAll("[data-nav]");
+const storyImage = document.getElementById("story-image");
+const storyKicker = document.getElementById("story-kicker");
+const storyTitle = document.getElementById("story-title");
+const storyMeta = document.getElementById("story-meta");
+const storySummary = document.getElementById("story-summary");
+const storyWhy = document.getElementById("story-why");
+const storyWatch = document.getElementById("story-watch");
+const storyOriginalLink = document.getElementById("story-original-link");
 
 let currentTopic = "";
 let latestBriefing = null;
@@ -118,6 +127,45 @@ function humanizeTopic(topic) {
     .join(" ");
 }
 
+function cleanTitle(title = "") {
+  return title.replace(/\s[-|]\s[^-|]+$/, "").trim() || title;
+}
+
+function slugify(value = "") {
+  const slug = cleanTitle(value)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 82);
+
+  return slug || "briefing";
+}
+
+function base64UrlEncode(value) {
+  const json = JSON.stringify(value);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64UrlDecode(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
 function getTopicCopy(topic) {
   const topicName = humanizeTopic(topic);
   const lower = topic.toLowerCase();
@@ -193,6 +241,53 @@ function getStoryLabel(article) {
   return "Briefing note";
 }
 
+function getStoryPayload(article) {
+  return {
+    title: cleanTitle(article.title),
+    source: article.source,
+    publishedAt: article.publishedAt,
+    description: article.description,
+    whyItMatters: article.whyItMatters,
+    link: article.link,
+    imageUrl: article.imageUrl,
+    visualUrl: article.visualUrl,
+    clusterCount: article.clusterCount,
+    clusterSources: article.clusterSources,
+    label: getStoryLabel(article),
+  };
+}
+
+function getStoryUrl(article) {
+  const payload = getStoryPayload(article);
+  return `/story/${slugify(payload.title)}?data=${base64UrlEncode(payload)}`;
+}
+
+function buildStorySummary(article) {
+  const source = article.source || "the original source";
+  const title = cleanTitle(article.title || "This story");
+  const context = article.whyItMatters || article.description || "The story is still developing.";
+
+  return `${source} is tracking ${title.toLowerCase()}. The useful signal for readers is this: ${context}`;
+}
+
+function buildWatchPoint(article) {
+  const text = `${article.title || ""} ${article.description || ""}`.toLowerCase();
+
+  if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/.test(text)) {
+    return "Watch whether the story changes pricing, investor positioning, or expectations in the next market session.";
+  }
+
+  if (/(war|tariff|sanction|election|government|minister|regulation)/.test(text)) {
+    return "Watch for policy responses, official statements, and second-order effects for companies exposed to the region.";
+  }
+
+  if (/(ai|chip|software|startup|technology|app)/.test(text)) {
+    return "Watch for product, regulatory, or capital-allocation signals that show whether this becomes a durable tech trend.";
+  }
+
+  return "Watch whether other credible sources confirm the direction and whether the story develops beyond the first headline.";
+}
+
 function updateActiveNavigation() {
   const route = getRoute();
   const hashKey = window.location.hash.replace("#", "");
@@ -221,6 +316,7 @@ function updateActiveNavigation() {
 function showView(viewName) {
   homeView.hidden = viewName !== "home";
   todayView.hidden = viewName !== "today";
+  storyView.hidden = viewName !== "story";
   aboutView.hidden = viewName !== "about";
 }
 
@@ -339,7 +435,7 @@ function createCard(article) {
   }
 
   const link = fragment.querySelector(".card-link");
-  link.href = article.link;
+  link.href = getStoryUrl(article);
 
   const sourceMenu = fragment.querySelector(".source-menu");
   const sourceMenuButton = sourceMenu.querySelector(".source-menu-button");
@@ -423,10 +519,8 @@ function renderLead(article) {
 
   const link = document.createElement("a");
   link.className = "lead-link";
-  link.href = article.link;
-  link.target = "_blank";
-  link.rel = "noreferrer";
-  link.textContent = "Read the lead story";
+  link.href = getStoryUrl(article);
+  link.textContent = "Read the brief";
 
   leadStory.append(source, title, summary, link);
 
@@ -442,9 +536,7 @@ function renderFastBriefing(articles) {
   for (const article of getVisibleArticles(articles)) {
     const item = document.createElement("li");
     const link = document.createElement("a");
-    link.href = article.link;
-    link.target = "_blank";
-    link.rel = "noreferrer";
+    link.href = getStoryUrl(article);
     link.textContent = article.title;
 
     const meta = document.createElement("span");
@@ -582,7 +674,7 @@ function refreshCurrentNews() {
   }
 
   const route = getRoute();
-  if (route.type === "about") {
+  if (route.type === "about" || route.type === "story") {
     return;
   }
 
@@ -625,12 +717,64 @@ function getRoute() {
     return { type: "today" };
   }
 
+  if (window.location.pathname.startsWith("/story/")) {
+    return { type: "story" };
+  }
+
   const topic = getTopicFromPath();
   if (topic) {
     return { type: "topic", topic };
   }
 
   return { type: "home" };
+}
+
+function loadStoryPage() {
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get("data");
+
+  showView("story");
+  currentTopic = "";
+  latestSearchArticles = [];
+  updateTopicExperience("");
+  updateActiveNavigation();
+
+  if (!encoded) {
+    storyTitle.textContent = "Story brief unavailable";
+    storySummary.textContent = "This story link is missing its briefing data. Return to the homepage and open it again.";
+    storyWhy.textContent = "The prototype currently stores story page data in the generated URL.";
+    storyWatch.textContent = "Persistent story storage should be the next production step.";
+    storyOriginalLink.hidden = true;
+    setPageMeta("Story unavailable | SignalLedger");
+    return;
+  }
+
+  try {
+    const article = base64UrlDecode(encoded);
+    const title = cleanTitle(article.title);
+    const source = article.source || "Original source";
+    const published = formatDate(article.publishedAt);
+
+    storyImage.src = article.visualUrl || article.imageUrl || "/favicon.svg";
+    storyImage.alt = "";
+    storyKicker.textContent = article.label || getStoryLabel(article);
+    storyTitle.textContent = title;
+    storyMeta.textContent = `${source}${published ? ` · ${published}` : ""}`;
+    storySummary.textContent = buildStorySummary(article);
+    storyWhy.textContent = article.whyItMatters || article.description || "This story is developing.";
+    storyWatch.textContent = buildWatchPoint(article);
+    storyOriginalLink.href = article.link;
+    storyOriginalLink.hidden = !article.link;
+    storyOriginalLink.textContent = `Read original article on ${source}`;
+    setPageMeta(`${title} | SignalLedger`, buildStorySummary(article));
+  } catch (error) {
+    storyTitle.textContent = "Story brief unavailable";
+    storySummary.textContent = "This story link could not be decoded. Return to the homepage and open it again.";
+    storyWhy.textContent = error.message;
+    storyWatch.textContent = "Persistent story storage should be the next production step.";
+    storyOriginalLink.hidden = true;
+    setPageMeta("Story unavailable | SignalLedger");
+  }
 }
 
 function rerenderCurrentView() {
@@ -772,6 +916,11 @@ async function loadRoute() {
 
   if (route.type === "today") {
     await loadTodayBriefing();
+    return;
+  }
+
+  if (route.type === "story") {
+    loadStoryPage();
     return;
   }
 

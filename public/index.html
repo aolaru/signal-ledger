@@ -149,6 +149,41 @@
           </section>
         </section>
 
+        <article id="story-view" class="route-view story-view" hidden>
+          <a class="back-link" href="/">Back to briefing</a>
+          <div class="story-page-grid">
+            <figure class="story-page-visual">
+              <img id="story-image" alt="" />
+            </figure>
+            <div class="story-page-body">
+              <p id="story-kicker" class="story-label"></p>
+              <h1 id="story-title"></h1>
+              <p id="story-meta" class="story-meta"></p>
+              <section class="story-brief">
+                <p class="section-label">SignalLedger brief</p>
+                <p id="story-summary"></p>
+              </section>
+              <section class="story-points">
+                <div>
+                  <p class="section-label">Why it matters</p>
+                  <p id="story-why"></p>
+                </div>
+                <div>
+                  <p class="section-label">What to watch</p>
+                  <p id="story-watch"></p>
+                </div>
+              </section>
+              <a id="story-original-link" class="original-link" target="_blank" rel="noreferrer">
+                Read original article
+              </a>
+              <p class="story-disclaimer">
+                This is a short original briefing based on public feed metadata. The original publisher owns the
+                reporting.
+              </p>
+            </div>
+          </div>
+        </article>
+
         <section id="about-view" class="route-view page-view" hidden>
           <div class="page-heading about-heading">
             <p class="section-label">About SignalLedger</p>
@@ -234,7 +269,7 @@
         <p class="cluster-label"></p>
         <p class="card-description"></p>
         <div class="card-actions">
-          <a class="card-link" target="_blank" rel="noreferrer">Read article</a>
+          <a class="card-link">Read brief</a>
           <div class="source-menu">
             <button class="source-menu-button" type="button" aria-haspopup="true">Source</button>
             <div class="source-menu-popover">

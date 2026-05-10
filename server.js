@@ -331,6 +331,10 @@ app.get(/^\/topic\/.+/, (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+app.get(/^\/story\/.+/, (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.get(["/about", "/briefing/today"], (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
