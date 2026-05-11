@@ -499,6 +499,14 @@ function renderLead(article) {
 
   leadStory.innerHTML = "";
 
+  const visual = document.createElement("img");
+  visual.className = "lead-visual";
+  visual.src = article.visualUrl || article.imageUrl || "/favicon.svg";
+  visual.alt = "";
+
+  const content = document.createElement("div");
+  content.className = "lead-content";
+
   const source = document.createElement("span");
   source.className = "lead-source";
 
@@ -522,11 +530,12 @@ function renderLead(article) {
   link.href = getStoryUrl(article);
   link.textContent = "Read the brief";
 
-  leadStory.append(source, title, summary, link);
+  content.append(source, title, summary, link);
+  leadStory.append(visual, content);
 
   const panel = document.querySelector(".lead-panel");
-  if (panel && article.visualUrl) {
-    panel.style.backgroundImage = `linear-gradient(120deg, rgba(8, 63, 53, 0.92), rgba(20, 24, 23, 0.58)), url("${article.visualUrl}")`;
+  if (panel) {
+    panel.style.backgroundImage = "";
   }
 }
 
