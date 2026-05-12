@@ -51,10 +51,18 @@ function installCacheStub() {
 }
 
 function installFetchStub() {
-  globalThis.fetch = async (url) => {
+  globalThis.fetch = async (url, options = {}) => {
     const href = String(url);
 
-    if (href.includes("news.google.com")) {
+    if (
+      href.includes("news.google.com") ||
+      href.includes("feeds.bbci.co.uk") ||
+      href.includes("theguardian.com") ||
+      href.includes("techcrunch.com/feed") ||
+      href.includes("arstechnica.com") ||
+      href.includes("cnbc.com") ||
+      href.includes("romania-insider.com/feed")
+    ) {
       return new Response(rss, {
         status: 200,
         headers: { "Content-Type": "application/rss+xml" },
@@ -68,7 +76,25 @@ function installFetchStub() {
       });
     }
 
+    if (href.includes("newsletter.example.test")) {
+      const body = options.body ? JSON.parse(options.body) : {};
+      return Response.json({ ok: true, email: body.email });
+    }
+
     throw new Error(`Unexpected fetch: ${href}`);
+  };
+}
+
+function createKvStore() {
+  const store = new Map();
+  return {
+    store,
+    binding: {
+      get: async (key) => store.get(key) ?? null,
+      put: async (key, value) => {
+        store.set(key, value);
+      },
+    },
   };
 }
 
@@ -93,8 +119,11 @@ describe("Worker API", () => {
     assert.equal(body.markets.length, 6);
     assert.equal(body.sections.length, 6);
     assert.equal(body.lead.source, "Reuters");
-    assert.equal(body.lead.clusterCount, 2);
-    assert.deepEqual(body.lead.clusterSources.slice(0, 2), ["Reuters", "CNBC"]);
+    assert.ok(body.lead.storyId);
+    assert.ok(body.lead.storySlug);
+    assert.equal(typeof body.lead.storyStored, "boolean");
+    assert.ok(body.lead.clusterCount >= 1);
+    assert.ok(body.lead.clusterSources.includes("Reuters"));
   });
 
   it("returns topic search results from /api/news", async () => {
@@ -104,6 +133,31 @@ describe("Worker API", () => {
     assert.equal(body.topic, "artificial intelligence");
     assert.ok(body.articles.length > 0);
     assert.ok(body.articles[0].visualUrl);
+  });
+
+  it("returns stored story briefs when STORY_BRIEFS is configured", async () => {
+    const stories = createKvStore();
+    const storyEnv = {
+      ...env,
+      STORY_BRIEFS: stories.binding,
+    };
+
+    const briefingResponse = await worker.fetch(new Request("https://signal-ledger.test/api/briefing"), storyEnv, ctx);
+    const briefing = await briefingResponse.json();
+
+    assert.equal(briefingResponse.status, 200);
+    assert.equal(briefing.lead.storyStored, true);
+
+    const storyResponse = await worker.fetch(
+      new Request(`https://signal-ledger.test/api/story?id=${briefing.lead.storyId}`),
+      storyEnv,
+      ctx,
+    );
+    const storyBody = await storyResponse.json();
+
+    assert.equal(storyResponse.status, 200);
+    assert.equal(storyBody.story.storyId, briefing.lead.storyId);
+    assert.equal(storyBody.story.source, "Reuters");
   });
 
   it("stores newsletter signups when KV is configured", async () => {
@@ -131,6 +185,25 @@ describe("Worker API", () => {
     assert.equal(response.status, 200);
     assert.equal(body.storage, "cloudflare-kv");
     assert.equal(writes.get("signup:reader@example.com").email, "reader@example.com");
+  });
+
+  it("sends newsletter signups to a configured webhook provider", async () => {
+    const response = await worker.fetch(
+      new Request("https://signal-ledger.test/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reader@example.com" }),
+      }),
+      {
+        ...env,
+        NEWSLETTER_WEBHOOK_URL: "https://newsletter.example.test/subscribe",
+      },
+      ctx,
+    );
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.provider, "webhook");
   });
 
   it("rejects invalid newsletter emails", async () => {

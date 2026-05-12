@@ -44,18 +44,18 @@ let latestSearchArticles = [];
 let hiddenSources = new Set(JSON.parse(localStorage.getItem("hiddenSources") || "[]"));
 let preferredSources = new Set(JSON.parse(localStorage.getItem("preferredSources") || "[]"));
 const savedEmail = localStorage.getItem("newsletterEmail");
-const apiVersion = "2026-05-09-briefing-v2";
+const apiVersion = "2026-05-12-hybrid-v1";
 const newsRefreshMs = 10 * 60 * 1000;
 const marketRefreshMs = 60 * 1000;
 let lastNewsRefreshAt = 0;
 let marketRefreshTimer;
 let newsRefreshTimer;
 const defaultDescription =
-  "A focused business, technology, markets, and world news briefing powered by Google News RSS.";
+  "A focused business, technology, markets, and world news briefing powered by direct publisher feeds with fallback aggregation.";
 
 if (savedEmail) {
   newsletterEmail.value = savedEmail;
-  newsletterStatus.textContent = "You are on the prototype briefing list.";
+  newsletterStatus.textContent = "Your email is saved for the briefing list.";
 }
 
 function formatDate(value) {
@@ -243,6 +243,9 @@ function getStoryLabel(article) {
 
 function getStoryPayload(article) {
   return {
+    storyId: article.storyId,
+    storySlug: article.storySlug || slugify(article.title),
+    storyStored: Boolean(article.storyStored),
     title: cleanTitle(article.title),
     source: article.source,
     publishedAt: article.publishedAt,
@@ -259,7 +262,12 @@ function getStoryPayload(article) {
 
 function getStoryUrl(article) {
   const payload = getStoryPayload(article);
-  return `/story/${slugify(payload.title)}?data=${base64UrlEncode(payload)}`;
+
+  if (payload.storyStored && payload.storyId) {
+    return `/story/${payload.storySlug}?id=${encodeURIComponent(payload.storyId)}`;
+  }
+
+  return `/story/${payload.storySlug}?data=${base64UrlEncode(payload)}`;
 }
 
 function buildStorySummary(article) {
@@ -738,8 +746,52 @@ function getRoute() {
   return { type: "home" };
 }
 
-function loadStoryPage() {
+async function fetchStoredStory(storyId) {
+  const response = await fetch(`/api/story?id=${encodeURIComponent(storyId)}&v=${apiVersion}`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.details || data.error || "Story brief unavailable");
+  }
+
+  return data.story;
+}
+
+function renderStoryPage(article) {
+  const title = cleanTitle(article.title);
+  const source = article.source || "Original source";
+  const published = formatDate(article.publishedAt);
+
+  storyImage.src = article.visualUrl || article.imageUrl || "/favicon.svg";
+  storyImage.alt = "";
+  storyKicker.textContent = article.label || getStoryLabel(article);
+  storyTitle.textContent = title;
+  storyMeta.textContent = `${source}${published ? ` · ${published}` : ""}`;
+  storySummary.textContent = buildStorySummary(article);
+  storyWhy.textContent = article.whyItMatters || article.description || "This story is developing.";
+  storyWatch.textContent = buildWatchPoint(article);
+  storyOriginalLink.href = article.link || "#";
+  storyOriginalLink.hidden = !article.link;
+  storyOriginalLink.textContent = `Read original article on ${source}`;
+  setPageMeta(`${title} | SignalLedger`, buildStorySummary(article));
+}
+
+function renderMissingStory(title, summary, why, watch) {
+  storyImage.src = "/favicon.svg";
+  storyImage.alt = "";
+  storyKicker.textContent = "Story unavailable";
+  storyTitle.textContent = title;
+  storyMeta.textContent = "";
+  storySummary.textContent = summary;
+  storyWhy.textContent = why;
+  storyWatch.textContent = watch;
+  storyOriginalLink.hidden = true;
+  setPageMeta("Story unavailable | SignalLedger");
+}
+
+async function loadStoryPage() {
   const params = new URLSearchParams(window.location.search);
+  const storyId = params.get("id")?.trim();
   const encoded = params.get("data");
 
   showView("story");
@@ -748,41 +800,45 @@ function loadStoryPage() {
   updateTopicExperience("");
   updateActiveNavigation();
 
-  if (!encoded) {
-    storyTitle.textContent = "Story brief unavailable";
-    storySummary.textContent = "This story link is missing its briefing data. Return to the homepage and open it again.";
-    storyWhy.textContent = "The prototype currently stores story page data in the generated URL.";
-    storyWatch.textContent = "Persistent story storage should be the next production step.";
-    storyOriginalLink.hidden = true;
-    setPageMeta("Story unavailable | SignalLedger");
+  if (!storyId && !encoded) {
+    renderMissingStory(
+      "Story brief unavailable",
+      "This story link is missing its briefing data. Return to the homepage and open it again.",
+      "The link does not contain a stored story ID or a fallback article payload.",
+      "Open the article again from the homepage or topic page to regenerate the brief link.",
+    );
     return;
   }
 
   try {
-    const article = base64UrlDecode(encoded);
-    const title = cleanTitle(article.title);
-    const source = article.source || "Original source";
-    const published = formatDate(article.publishedAt);
+    let article = null;
 
-    storyImage.src = article.visualUrl || article.imageUrl || "/favicon.svg";
-    storyImage.alt = "";
-    storyKicker.textContent = article.label || getStoryLabel(article);
-    storyTitle.textContent = title;
-    storyMeta.textContent = `${source}${published ? ` · ${published}` : ""}`;
-    storySummary.textContent = buildStorySummary(article);
-    storyWhy.textContent = article.whyItMatters || article.description || "This story is developing.";
-    storyWatch.textContent = buildWatchPoint(article);
-    storyOriginalLink.href = article.link;
-    storyOriginalLink.hidden = !article.link;
-    storyOriginalLink.textContent = `Read original article on ${source}`;
-    setPageMeta(`${title} | SignalLedger`, buildStorySummary(article));
+    if (storyId) {
+      try {
+        article = await fetchStoredStory(storyId);
+      } catch (error) {
+        if (!encoded) {
+          throw error;
+        }
+      }
+    }
+
+    if (!article && encoded) {
+      article = base64UrlDecode(encoded);
+    }
+
+    if (!article) {
+      throw new Error("Story brief unavailable");
+    }
+
+    renderStoryPage(article);
   } catch (error) {
-    storyTitle.textContent = "Story brief unavailable";
-    storySummary.textContent = "This story link could not be decoded. Return to the homepage and open it again.";
-    storyWhy.textContent = error.message;
-    storyWatch.textContent = "Persistent story storage should be the next production step.";
-    storyOriginalLink.hidden = true;
-    setPageMeta("Story unavailable | SignalLedger");
+    renderMissingStory(
+      "Story brief unavailable",
+      "This story could not be loaded right now. Return to the homepage and open it again.",
+      error.message,
+      "If the stored story is no longer available, the encoded fallback link should still work for newly opened articles.",
+    );
   }
 }
 
@@ -929,7 +985,7 @@ async function loadRoute() {
   }
 
   if (route.type === "story") {
-    loadStoryPage();
+    await loadStoryPage();
     return;
   }
 
@@ -985,7 +1041,7 @@ newsletterForm.addEventListener("submit", async (event) => {
     }
 
     localStorage.setItem("newsletterEmail", email);
-    newsletterStatus.textContent = "You are on the prototype briefing list.";
+    newsletterStatus.textContent = data.message || "You are on the briefing list.";
   } catch (error) {
     newsletterStatus.textContent = error.message;
   }
