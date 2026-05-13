@@ -21,6 +21,13 @@ const topicPanel = document.getElementById("topic-panel");
 const topicTitle = document.getElementById("topic-title");
 const topicDescription = document.getElementById("topic-description");
 const metaDescription = document.querySelector("meta[name='description']");
+const canonicalLink = document.getElementById("canonical-link");
+const structuredDataScript = document.getElementById("structured-data");
+const ogTitle = document.querySelector("meta[property='og:title']");
+const ogDescription = document.querySelector("meta[property='og:description']");
+const ogUrl = document.querySelector("meta[property='og:url']");
+const twitterTitle = document.querySelector("meta[name='twitter:title']");
+const twitterDescription = document.querySelector("meta[name='twitter:description']");
 const homeView = document.getElementById("home-view");
 const todayView = document.getElementById("today-view");
 const storyView = document.getElementById("story-view");
@@ -37,6 +44,7 @@ const storySummary = document.getElementById("story-summary");
 const storyWhy = document.getElementById("story-why");
 const storyWatch = document.getElementById("story-watch");
 const storyOriginalLink = document.getElementById("story-original-link");
+const newsletterSubmit = document.getElementById("newsletter-submit");
 
 let currentTopic = "";
 let latestBriefing = null;
@@ -45,6 +53,8 @@ let hiddenSources = new Set(JSON.parse(localStorage.getItem("hiddenSources") || 
 let preferredSources = new Set(JSON.parse(localStorage.getItem("preferredSources") || "[]"));
 const savedEmail = localStorage.getItem("newsletterEmail");
 const apiVersion = "2026-05-12-hybrid-v1";
+const siteUrl = "https://getsignalledger.com";
+const siteName = "SignalLedger";
 const newsRefreshMs = 10 * 60 * 1000;
 const marketRefreshMs = 60 * 1000;
 let lastNewsRefreshAt = 0;
@@ -56,6 +66,7 @@ const defaultDescription =
 if (savedEmail) {
   newsletterEmail.value = savedEmail;
   newsletterStatus.textContent = "Your email is saved for the briefing list.";
+  newsletterStatus.dataset.state = "saved";
 }
 
 function formatDate(value) {
@@ -79,9 +90,46 @@ function setLastUpdated(value = new Date()) {
   lastNewsRefreshAt = Date.now();
 }
 
-function setPageMeta(title, description = defaultDescription) {
+function getAbsoluteUrl(path = "/") {
+  return new URL(path, siteUrl).toString();
+}
+
+function setStructuredData(data) {
+  if (structuredDataScript) {
+    structuredDataScript.textContent = JSON.stringify(data);
+  }
+}
+
+function setPageMeta(title, description = defaultDescription, options = {}) {
+  const path = options.path || window.location.pathname + window.location.search;
+  const absoluteUrl = getAbsoluteUrl(path);
+
   document.title = title;
   metaDescription.content = description;
+
+  if (canonicalLink) {
+    canonicalLink.href = absoluteUrl;
+  }
+
+  if (ogTitle) {
+    ogTitle.content = title;
+  }
+
+  if (ogDescription) {
+    ogDescription.content = description;
+  }
+
+  if (ogUrl) {
+    ogUrl.content = absoluteUrl;
+  }
+
+  if (twitterTitle) {
+    twitterTitle.content = title;
+  }
+
+  if (twitterDescription) {
+    twitterDescription.content = description;
+  }
 }
 
 function formatMarketValue(market) {
@@ -195,7 +243,16 @@ function getTopicCopy(topic) {
 function updateTopicExperience(topic = "") {
   if (!topic) {
     topicPanel.hidden = true;
-    setPageMeta("SignalLedger Briefing");
+    setPageMeta(`${siteName} Briefing`, defaultDescription, {
+      path: "/",
+    });
+    setStructuredData({
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: siteName,
+      url: siteUrl,
+      description: defaultDescription,
+    });
     return;
   }
 
@@ -203,7 +260,16 @@ function updateTopicExperience(topic = "") {
   topicPanel.hidden = false;
   topicTitle.textContent = copy.title;
   topicDescription.textContent = copy.description;
-  setPageMeta(`${copy.title} | SignalLedger`, copy.description);
+  setPageMeta(`${copy.title} | ${siteName}`, copy.description, {
+    path: `/topic/${encodeURIComponent(topic.toLowerCase().replace(/\s+/g, "-"))}`,
+  });
+  setStructuredData({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `${copy.title} | ${siteName}`,
+    description: copy.description,
+    url: getAbsoluteUrl(`/topic/${encodeURIComponent(topic.toLowerCase().replace(/\s+/g, "-"))}`),
+  });
 }
 
 function getSectionDeck(key) {
@@ -260,11 +326,17 @@ function getStoryPayload(article) {
   };
 }
 
+function getStoredStoryPath(article) {
+  const storyId = article.storyId || article.id;
+  const storySlug = article.storySlug || slugify(article.title || storyId || "briefing");
+  return `/story/${encodeURIComponent(storyId)}/${storySlug}`;
+}
+
 function getStoryUrl(article) {
   const payload = getStoryPayload(article);
 
   if (payload.storyStored && payload.storyId) {
-    return `/story/${payload.storySlug}?id=${encodeURIComponent(payload.storyId)}`;
+    return getStoredStoryPath(payload);
   }
 
   return `/story/${payload.storySlug}?data=${base64UrlEncode(payload)}`;
@@ -294,6 +366,11 @@ function buildWatchPoint(article) {
   }
 
   return "Watch whether other credible sources confirm the direction and whether the story develops beyond the first headline.";
+}
+
+function setNewsletterStatus(message, state = "info") {
+  newsletterStatus.textContent = message;
+  newsletterStatus.dataset.state = state;
 }
 
 function updateActiveNavigation() {
@@ -746,6 +823,17 @@ function getRoute() {
   return { type: "home" };
 }
 
+function getStoryRouteDetails() {
+  const pathMatch = window.location.pathname.match(/^\/story\/([^/]+)(?:\/([^/]+))?$/);
+  const params = new URLSearchParams(window.location.search);
+
+  return {
+    storyId: pathMatch?.[2] ? decodeURIComponent(pathMatch[1]) : params.get("id")?.trim() || "",
+    storySlug: pathMatch?.[2] ? decodeURIComponent(pathMatch[2]) : pathMatch?.[1] ? decodeURIComponent(pathMatch[1]) : "",
+    encoded: params.get("data"),
+  };
+}
+
 async function fetchStoredStory(storyId) {
   const response = await fetch(`/api/story?id=${encodeURIComponent(storyId)}&v=${apiVersion}`);
   const data = await response.json();
@@ -761,6 +849,7 @@ function renderStoryPage(article) {
   const title = cleanTitle(article.title);
   const source = article.source || "Original source";
   const published = formatDate(article.publishedAt);
+  const canonicalPath = article.storyId ? getStoredStoryPath(article) : window.location.pathname + window.location.search;
 
   storyImage.src = article.visualUrl || article.imageUrl || "/favicon.svg";
   storyImage.alt = "";
@@ -773,7 +862,31 @@ function renderStoryPage(article) {
   storyOriginalLink.href = article.link || "#";
   storyOriginalLink.hidden = !article.link;
   storyOriginalLink.textContent = `Read original article on ${source}`;
-  setPageMeta(`${title} | SignalLedger`, buildStorySummary(article));
+  setPageMeta(`${title} | ${siteName}`, buildStorySummary(article), {
+    path: canonicalPath,
+  });
+  setStructuredData({
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: title,
+    description: buildStorySummary(article),
+    datePublished: article.publishedAt || undefined,
+    mainEntityOfPage: getAbsoluteUrl(canonicalPath),
+    url: getAbsoluteUrl(canonicalPath),
+    publisher: {
+      "@type": "Organization",
+      name: siteName,
+      url: siteUrl,
+    },
+    isBasedOn: article.link || undefined,
+    image: article.visualUrl ? [article.visualUrl] : undefined,
+    author: article.source
+      ? {
+          "@type": "Organization",
+          name: article.source,
+        }
+      : undefined,
+  });
 }
 
 function renderMissingStory(title, summary, why, watch) {
@@ -786,13 +899,19 @@ function renderMissingStory(title, summary, why, watch) {
   storyWhy.textContent = why;
   storyWatch.textContent = watch;
   storyOriginalLink.hidden = true;
-  setPageMeta("Story unavailable | SignalLedger");
+  setPageMeta(`Story unavailable | ${siteName}`, defaultDescription, {
+    path: window.location.pathname + window.location.search,
+  });
+  setStructuredData({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: "Story unavailable",
+    url: getAbsoluteUrl(window.location.pathname + window.location.search),
+  });
 }
 
 async function loadStoryPage() {
-  const params = new URLSearchParams(window.location.search);
-  const storyId = params.get("id")?.trim();
-  const encoded = params.get("data");
+  const { storyId, encoded } = getStoryRouteDetails();
 
   showView("story");
   currentTopic = "";
@@ -816,6 +935,9 @@ async function loadStoryPage() {
     if (storyId) {
       try {
         article = await fetchStoredStory(storyId);
+        if (!encoded && window.location.pathname !== getStoredStoryPath(article)) {
+          window.history.replaceState({}, "", getStoredStoryPath(article));
+        }
       } catch (error) {
         if (!encoded) {
           throw error;
@@ -886,6 +1008,16 @@ async function loadBriefing() {
     setStatus(`Briefing updated ${formatDate(data.generatedAt)}`);
     setLastUpdated(data.generatedAt);
     updateSourceControls();
+    setPageMeta(`${siteName} Briefing`, defaultDescription, {
+      path: "/",
+    });
+    setStructuredData({
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: `${siteName} Briefing`,
+      description: defaultDescription,
+      url: getAbsoluteUrl("/"),
+    });
   } catch (error) {
     setStatus(error.message, true);
     renderErrorPanel(sectionsContainer, error.message, loadBriefing);
@@ -935,9 +1067,19 @@ async function loadTodayBriefing() {
   updateTopicExperience("");
   updateActiveNavigation();
   setPageMeta(
-    "Today's Briefing | SignalLedger",
+    `Today's Briefing | ${siteName}`,
     "A concise SignalLedger briefing of today's business, technology, markets, and world headlines.",
+    {
+      path: "/briefing/today",
+    },
   );
+  setStructuredData({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `Today's Briefing | ${siteName}`,
+    description: "A concise SignalLedger briefing of today's business, technology, markets, and world headlines.",
+    url: getAbsoluteUrl("/briefing/today"),
+  });
   todaySummary.textContent = "Loading the latest briefing...";
   renderSkeletonGrid(todayGrid, 6);
   renderSkeletonGrid(todayLead, 1);
@@ -966,9 +1108,19 @@ function loadAbout() {
   updateTopicExperience("");
   updateActiveNavigation();
   setPageMeta(
-    "About SignalLedger",
-    "SignalLedger is a prototype business news briefing for readers who want market, technology, and geopolitical signal fast.",
+    `About ${siteName}`,
+    "SignalLedger is a business news briefing for readers who want market, technology, and geopolitical signal fast.",
+    {
+      path: "/about",
+    },
   );
+  setStructuredData({
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    name: `About ${siteName}`,
+    description: "SignalLedger is a business news briefing for readers who want market, technology, and geopolitical signal fast.",
+    url: getAbsoluteUrl("/about"),
+  });
 }
 
 async function loadRoute() {
@@ -1024,7 +1176,9 @@ resetSources.addEventListener("click", () => {
 newsletterForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = newsletterEmail.value.trim();
-  newsletterStatus.textContent = "Joining...";
+  newsletterSubmit.disabled = true;
+  newsletterForm.setAttribute("aria-busy", "true");
+  setNewsletterStatus("Joining...", "pending");
 
   try {
     const response = await fetch("/api/subscribe", {
@@ -1041,9 +1195,17 @@ newsletterForm.addEventListener("submit", async (event) => {
     }
 
     localStorage.setItem("newsletterEmail", email);
-    newsletterStatus.textContent = data.message || "You are on the briefing list.";
+    setNewsletterStatus(
+      data.provider && data.provider !== "local-prototype"
+        ? `${data.message || "You are on the briefing list."} Check your inbox if confirmation is required.`
+        : data.message || "You are on the briefing list.",
+      data.provider && data.provider !== "local-prototype" ? "success" : "saved",
+    );
   } catch (error) {
-    newsletterStatus.textContent = error.message;
+    setNewsletterStatus(error.message, "error");
+  } finally {
+    newsletterSubmit.disabled = false;
+    newsletterForm.removeAttribute("aria-busy");
   }
 });
 

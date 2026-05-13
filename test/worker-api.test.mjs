@@ -121,6 +121,7 @@ describe("Worker API", () => {
     assert.equal(body.lead.source, "Reuters");
     assert.ok(body.lead.storyId);
     assert.ok(body.lead.storySlug);
+    assert.ok(body.lead.canonicalPath.startsWith("/story/"));
     assert.equal(typeof body.lead.storyStored, "boolean");
     assert.ok(body.lead.clusterCount >= 1);
     assert.ok(body.lead.clusterSources.includes("Reuters"));
@@ -158,6 +159,16 @@ describe("Worker API", () => {
     assert.equal(storyResponse.status, 200);
     assert.equal(storyBody.story.storyId, briefing.lead.storyId);
     assert.equal(storyBody.story.source, "Reuters");
+    assert.ok(storyBody.story.canonicalPath.startsWith("/story/"));
+  });
+
+  it("returns health diagnostics for feeds, newsletter, and story storage", async () => {
+    const { response, body } = await json("/api/health");
+
+    assert.equal(response.status, 200);
+    assert.equal(body.storyStorage.provider, "url-fallback");
+    assert.equal(body.newsletter.provider, "local-prototype");
+    assert.ok(body.feeds.length >= 1);
   });
 
   it("stores newsletter signups when KV is configured", async () => {

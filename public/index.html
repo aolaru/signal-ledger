@@ -5,8 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="A focused business, technology, markets, and world news briefing powered by Google News RSS."
+      content="SignalLedger is a focused business, technology, markets, and world news briefing built on direct publisher feeds with fallback aggregation."
     />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:site_name" content="SignalLedger" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SignalLedger Briefing" />
+    <meta
+      property="og:description"
+      content="SignalLedger is a focused business, technology, markets, and world news briefing built on direct publisher feeds with fallback aggregation."
+    />
+    <meta property="og:url" content="https://getsignalledger.com/" />
+    <meta property="og:image" content="https://getsignalledger.com/social-card.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SignalLedger Briefing" />
+    <meta
+      name="twitter:description"
+      content="SignalLedger is a focused business, technology, markets, and world news briefing built on direct publisher feeds with fallback aggregation."
+    />
+    <meta name="twitter:image" content="https://getsignalledger.com/social-card.svg" />
+    <link id="canonical-link" rel="canonical" href="https://getsignalledger.com/" />
     <title>SignalLedger Briefing</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,6 +34,15 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <script id="structured-data" type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "SignalLedger",
+        "url": "https://getsignalledger.com/",
+        "description": "SignalLedger is a focused business, technology, markets, and world news briefing built on direct publisher feeds with fallback aggregation."
+      }
+    </script>
   </head>
   <body>
     <div class="page-shell">
@@ -86,6 +113,10 @@
             <div>
               <p class="section-label">Morning briefing</p>
               <h2>Get SignalLedger by email.</h2>
+              <p class="newsletter-copy">
+                A tighter daily scan of markets, business, tech, and geopolitical signal. Original reporting stays with
+                the publisher.
+              </p>
             </div>
             <form id="newsletter-form" class="newsletter-form">
               <input
@@ -96,8 +127,9 @@
                 autocomplete="email"
                 required
               />
-              <button type="submit">Join</button>
+              <button id="newsletter-submit" type="submit">Join</button>
             </form>
+            <p class="newsletter-help">No spam. No account required. The email product is being wired into a real list now.</p>
             <p id="newsletter-status" class="newsletter-status" aria-live="polite"></p>
           </section>
 
@@ -199,10 +231,10 @@
           <div class="method-grid">
             <article class="method-card">
               <p class="section-label">Source layer</p>
-              <h2>Google News RSS</h2>
+              <h2>Direct publisher feeds first</h2>
               <p>
-                The prototype collects current headlines from Google News RSS, keeps source attribution visible, and
-                links every card back to the original publisher.
+                SignalLedger now pulls from direct publisher RSS feeds first, keeps source attribution visible, and uses
+                Google News only as fallback discovery when direct coverage is thin.
               </p>
             </article>
             <article class="method-card">
@@ -215,10 +247,10 @@
             </article>
             <article class="method-card">
               <p class="section-label">Product direction</p>
-              <h2>Signal over volume</h2>
+              <h2>Signal over feed volume</h2>
               <p>
-                The goal is not to be another infinite feed. It is to package the few stories that deserve a decision
-                maker's attention.
+                The goal is not to be another infinite feed. It is to package the few stories that deserve a business
+                reader's attention, with original brief pages and clearer source context.
               </p>
             </article>
           </div>
@@ -226,8 +258,8 @@
             <p class="section-label">What comes next</p>
             <h2>Editorial differentiation matters.</h2>
             <p>
-              The durable version of this product needs stronger curation, proprietary summaries, better market data,
-              and an email habit. The current site is the local prototype for proving that direction.
+              The durable version of this product needs stronger curation, cleaner story archives, better market data,
+              and a repeatable email habit. The current site is the working prototype for proving that direction.
             </p>
           </section>
         </section>

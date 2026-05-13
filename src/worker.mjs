@@ -128,6 +128,40 @@ const trustedSourceBoosts = new Map([
   ["Romania Insider", 12],
 ]);
 
+const storyStorageTtlSeconds = 60 * 60 * 24 * 30;
+const requestTimeoutMs = 8000;
+const requestRetryCount = 2;
+const feedDiagnostics = new Map();
+const marketDiagnostics = new Map();
+const titleStopwords = new Set([
+  "amid",
+  "after",
+  "and",
+  "are",
+  "as",
+  "at",
+  "but",
+  "for",
+  "from",
+  "how",
+  "its",
+  "new",
+  "not",
+  "now",
+  "off",
+  "out",
+  "says",
+  "say",
+  "the",
+  "their",
+  "this",
+  "that",
+  "what",
+  "when",
+  "with",
+  "will",
+]);
+
 function jsonResponse(data, status = 200, cacheSeconds = 0) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
@@ -198,6 +232,36 @@ function cleanTitle(title = "") {
   return title.replace(/\s[-|]\s[^-|]+$/, "").trim() || title;
 }
 
+function getStoryPath(story) {
+  return `/story/${encodeURIComponent(story.storyId)}/${story.storySlug || slugify(story.title || story.storyId)}`;
+}
+
+function withStoryMeta(story, storyStored) {
+  return {
+    ...story,
+    storyStored,
+    storySlug: story.storySlug || slugify(story.title || story.storyId),
+    canonicalPath: getStoryPath(story),
+  };
+}
+
+function recordDiagnostic(store, key, payload) {
+  store.set(key, {
+    ...(store.get(key) || {}),
+    ...payload,
+    checkedAt: new Date().toISOString(),
+  });
+}
+
+function getDiagnosticSnapshot(store) {
+  return [...store.entries()]
+    .map(([key, value]) => ({
+      key,
+      ...value,
+    }))
+    .sort((first, second) => first.name.localeCompare(second.name));
+}
+
 function buildFeedUrl(topic) {
   if (!topic) {
     return "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en";
@@ -238,6 +302,53 @@ function getArticleId(article) {
     .trim();
 }
 
+function getTitleTokens(title = "") {
+  return cleanTitle(title)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .filter((token) => token && token.length > 2 && !titleStopwords.has(token));
+}
+
+function getEventKey(article) {
+  const tokens = getTitleTokens(article.title || "");
+  return tokens.slice(0, 5).join(" ") || article.storyId || getArticleId(article);
+}
+
+function getTokenOverlap(firstTitle = "", secondTitle = "") {
+  const firstTokens = new Set(getTitleTokens(firstTitle));
+  const secondTokens = new Set(getTitleTokens(secondTitle));
+
+  if (!firstTokens.size || !secondTokens.size) {
+    return 0;
+  }
+
+  let matches = 0;
+  for (const token of firstTokens) {
+    if (secondTokens.has(token)) {
+      matches += 1;
+    }
+  }
+
+  return matches / Math.max(1, Math.min(firstTokens.size, secondTokens.size));
+}
+
+function areArticlesSimilar(first, second) {
+  if (!first || !second) {
+    return false;
+  }
+
+  if (first.link && second.link && first.link === second.link) {
+    return true;
+  }
+
+  if (getEventKey(first) === getEventKey(second)) {
+    return true;
+  }
+
+  return getTokenOverlap(first.title, second.title) >= 0.6;
+}
+
 function scoreArticle(article) {
   const publishedAt = new Date(article.publishedAt).getTime();
   const ageHours = Number.isNaN(publishedAt) ? 72 : (Date.now() - publishedAt) / 36e5;
@@ -246,6 +357,10 @@ function scoreArticle(article) {
   const providerBoost = article.provider === "rss-direct" ? 8 : 0;
 
   return sourceBoost + recencyScore + providerBoost;
+}
+
+function rankArticle(article) {
+  return scoreArticle(article) + Math.min(6, Math.max(0, (article.clusterCount || 1) - 1)) * 6;
 }
 
 function getWhyItMatters(article, fallbackTopic) {
@@ -281,6 +396,7 @@ function buildArticle(item, topic, sourceFallback, provider) {
     storyId,
     storySlug: slugify(title),
     storyStored: false,
+    canonicalPath: getStoryPath({ storyId, storySlug: slugify(title), title }),
     title,
     link,
     publishedAt: item.pubDate || item.published || item.updated || "",
@@ -302,57 +418,151 @@ function buildArticle(item, topic, sourceFallback, provider) {
   };
 }
 
-async function fetchRss(url) {
-  const response = await fetch(url, {
-    headers: {
-      "Accept": "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.1",
-      "User-Agent": "Mozilla/5.0 SignalLedger/1.0",
-    },
-  });
+async function fetchText(url, headers) {
+  let lastError = new Error("Unknown request failure");
 
-  if (!response.ok) {
-    throw new Error(`RSS request failed with ${response.status}`);
+  for (let attempt = 0; attempt < requestRetryCount; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        headers,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with ${response.status}`);
+      }
+
+      return await response.text();
+    } catch (error) {
+      lastError =
+        error.name === "AbortError" ? new Error(`Request timed out after ${requestTimeoutMs}ms`) : error;
+
+      if (attempt + 1 < requestRetryCount) {
+        await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
-  return parser.parse(await response.text());
+  throw lastError;
+}
+
+async function fetchRss(url) {
+  return parser.parse(
+    await fetchText(url, {
+      "Accept": "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.1",
+      "User-Agent": "Mozilla/5.0 SignalLedger/1.0",
+    }),
+  );
+}
+
+function recordFeedSuccess(feed, provider, count, latencyMs) {
+  recordDiagnostic(feedDiagnostics, feed.url, {
+    name: feed.name,
+    url: feed.url,
+    provider,
+    status: "ok",
+    articleCount: count,
+    latencyMs,
+    lastSuccessAt: new Date().toISOString(),
+    lastError: "",
+  });
+}
+
+function recordFeedFailure(feed, provider, error) {
+  recordDiagnostic(feedDiagnostics, feed.url, {
+    name: feed.name,
+    url: feed.url,
+    provider,
+    status: "error",
+    articleCount: 0,
+    lastFailureAt: new Date().toISOString(),
+    lastError: error.message,
+  });
 }
 
 async function fetchFeedArticles(feed, topic, limit = 12) {
-  const parsed = await fetchRss(feed.url);
-  const channel = parsed?.rss?.channel || parsed?.feed;
+  const startedAt = Date.now();
 
-  return getItems(channel)
-    .slice(0, Math.max(limit * 2, limit))
-    .map((item) => buildArticle(item, topic, feed.name, "rss-direct"))
-    .sort((first, second) => scoreArticle(second) - scoreArticle(first))
-    .slice(0, limit);
+  try {
+    const parsed = await fetchRss(feed.url);
+    const channel = parsed?.rss?.channel || parsed?.feed;
+    const articles = getItems(channel)
+      .slice(0, Math.max(limit * 2, limit))
+      .map((item) => buildArticle(item, topic, feed.name, "rss-direct"))
+      .sort((first, second) => scoreArticle(second) - scoreArticle(first))
+      .slice(0, limit);
+
+    recordFeedSuccess(feed, "rss-direct", articles.length, Date.now() - startedAt);
+    return articles;
+  } catch (error) {
+    recordFeedFailure(feed, "rss-direct", error);
+    throw error;
+  }
 }
 
 async function fetchGoogleNewsArticles(topic, limit = 12) {
-  const parsed = await fetchRss(buildFeedUrl(topic));
-  const channel = parsed?.rss?.channel;
+  const feed = {
+    name: "Google News fallback",
+    url: buildFeedUrl(topic),
+  };
+  const startedAt = Date.now();
 
-  return getItems(channel)
-    .slice(0, Math.max(limit * 2, limit))
-    .map((item) => buildArticle(item, topic, "Google News", "google-news"))
-    .sort((first, second) => scoreArticle(second) - scoreArticle(first))
-    .slice(0, limit);
+  try {
+    const parsed = await fetchRss(feed.url);
+    const channel = parsed?.rss?.channel;
+    const articles = getItems(channel)
+      .slice(0, Math.max(limit * 2, limit))
+      .map((item) => buildArticle(item, topic, "Google News", "google-news"))
+      .sort((first, second) => scoreArticle(second) - scoreArticle(first))
+      .slice(0, limit);
+
+    recordFeedSuccess(feed, "google-news", articles.length, Date.now() - startedAt);
+    return articles;
+  } catch (error) {
+    recordFeedFailure(feed, "google-news", error);
+    throw error;
+  }
 }
 
 function dedupeArticles(articles, limit) {
-  const seen = new Set();
+  const groups = [];
 
-  return articles
-    .filter((article) => {
-      const key = article.storyId || getArticleId(article);
-      if (seen.has(key)) {
-        return false;
-      }
+  for (const article of articles.filter(Boolean).sort((first, second) => scoreArticle(second) - scoreArticle(first))) {
+    const group = groups.find((candidate) => areArticlesSimilar(article, candidate.representative));
 
-      seen.add(key);
-      return true;
-    })
-    .sort((first, second) => scoreArticle(second) - scoreArticle(first))
+    if (!group) {
+      groups.push({
+        representative: article,
+        articles: [article],
+        sources: new Set([article.source, ...(article.clusterSources || [])].filter(Boolean)),
+      });
+      continue;
+    }
+
+    group.articles.push(article);
+    for (const source of [article.source, ...(article.clusterSources || [])].filter(Boolean)) {
+      group.sources.add(source);
+    }
+  }
+
+  return groups
+    .map((group) =>
+      withStoryMeta(
+        {
+          ...group.representative,
+          clusterSources: [...group.sources],
+          clusterCount: group.sources.size,
+          clusterSize: group.articles.length,
+        },
+        group.representative.storyStored,
+      ),
+    )
+    .sort((first, second) => rankArticle(second) - rankArticle(first))
     .slice(0, limit);
 }
 
@@ -372,14 +582,24 @@ async function fetchArticles(topic, limit = 12, feeds = []) {
 
 async function persistStories(env, stories) {
   if (!env.STORY_BRIEFS) {
-    return stories.map((story) => ({ ...story, storyStored: false }));
+    return stories.map((story) => withStoryMeta(story, false));
   }
 
+  const storedAt = new Date().toISOString();
+  const storedStories = stories.map((story) => ({
+    ...withStoryMeta(story, true),
+    storedAt,
+  }));
+
   await Promise.all(
-    stories.map((story) => env.STORY_BRIEFS.put(`story:${story.storyId}`, JSON.stringify(story))),
+    storedStories.map((story) =>
+      env.STORY_BRIEFS.put(`story:${story.storyId}`, JSON.stringify(story), {
+        expirationTtl: storyStorageTtlSeconds,
+      }),
+    ),
   );
 
-  return stories.map((story) => ({ ...story, storyStored: true }));
+  return storedStories;
 }
 
 function collectStories(briefing) {
@@ -411,10 +631,10 @@ async function buildBriefing(env) {
     ...sections.map((section) => fetchArticles(section.query, 8, section.feeds)),
   ]);
 
-  const seen = new Set(topStories.map(getArticleId));
+  const seen = new Set(topStories.map(getEventKey));
   const sectionData = sections.map((section, index) => {
     const articles = sectionFeeds[index].filter((article) => {
-      const id = getArticleId(article);
+      const id = getEventKey(article);
       if (seen.has(id)) {
         return false;
       }
@@ -472,29 +692,40 @@ function parseMarketCsv(csv, market) {
 
 async function fetchMarket(market) {
   const errors = [];
+  const startedAt = Date.now();
 
   for (const symbol of market.symbols) {
     const symbolParam = symbol.startsWith("%") ? symbol : encodeURIComponent(symbol);
     const url = `https://stooq.com/q/l/?s=${symbolParam}&f=sd2t2ohlcvn&h&e=csv`;
-    const response = await fetch(url, {
-      headers: {
-        "Accept": "text/csv,*/*",
-        "User-Agent": "Mozilla/5.0 SignalLedger/1.0",
-      },
-    });
-
-    if (!response.ok) {
-      errors.push(`${symbol}: ${response.status}`);
-      continue;
-    }
 
     try {
-      return parseMarketCsv(await response.text(), market);
+      const csv = await fetchText(url, {
+        "Accept": "text/csv,*/*",
+        "User-Agent": "Mozilla/5.0 SignalLedger/1.0",
+      });
+      const parsed = parseMarketCsv(csv, market);
+      recordDiagnostic(marketDiagnostics, market.key, {
+        name: market.label,
+        symbol,
+        provider: "stooq",
+        status: "ok",
+        latencyMs: Date.now() - startedAt,
+        lastSuccessAt: new Date().toISOString(),
+        lastError: "",
+      });
+      return parsed;
     } catch (error) {
       errors.push(`${symbol}: ${error.message}`);
     }
   }
 
+  recordDiagnostic(marketDiagnostics, market.key, {
+    name: market.label,
+    provider: "stooq",
+    status: "error",
+    lastFailureAt: new Date().toISOString(),
+    lastError: errors.join("; ") || `No market data for ${market.key}`,
+  });
   throw new Error(errors.join("; ") || `No market data for ${market.key}`);
 }
 
@@ -654,6 +885,59 @@ function findSectionFeeds(topic = "") {
   })?.feeds;
 }
 
+function getActiveNewsletterProvider(env) {
+  if (env.BUTTONDOWN_API_KEY) {
+    return "buttondown";
+  }
+
+  if (env.KIT_API_KEY) {
+    return "kit";
+  }
+
+  if (env.NEWSLETTER_WEBHOOK_URL) {
+    return "webhook";
+  }
+
+  return "local-prototype";
+}
+
+function getConfiguredFeeds() {
+  const uniqueFeeds = new Map();
+
+  for (const feed of [...briefingFeeds, ...sections.flatMap((section) => section.feeds)]) {
+    if (!uniqueFeeds.has(feed.url)) {
+      uniqueFeeds.set(feed.url, feed);
+    }
+  }
+
+  return [...uniqueFeeds.values()].map((feed) => ({
+    name: feed.name,
+    url: feed.url,
+    provider: "rss-direct",
+    status: "pending",
+    ...(feedDiagnostics.get(feed.url) || {}),
+  }));
+}
+
+function getHealthReport(env) {
+  const googleFallback = getDiagnosticSnapshot(feedDiagnostics).filter((entry) => entry.provider === "google-news");
+
+  return {
+    generatedAt: new Date().toISOString(),
+    storyStorage: {
+      provider: env.STORY_BRIEFS ? "cloudflare-kv" : "url-fallback",
+      configured: Boolean(env.STORY_BRIEFS),
+      retentionDays: storyStorageTtlSeconds / 86400,
+    },
+    newsletter: {
+      provider: getActiveNewsletterProvider(env),
+      signupStorage: env.NEWSLETTER_SIGNUPS ? "cloudflare-kv" : "none",
+    },
+    feeds: [...getConfiguredFeeds(), ...googleFallback],
+    markets: getDiagnosticSnapshot(marketDiagnostics),
+  };
+}
+
 async function handleApi(request, env, ctx) {
   const url = new URL(request.url);
 
@@ -667,6 +951,10 @@ async function handleApi(request, env, ctx) {
         generatedAt: new Date().toISOString(),
         markets: await fetchMarkets(),
       }));
+    }
+
+    if (url.pathname === "/api/health") {
+      return jsonResponse(getHealthReport(env), 200, 30);
     }
 
     if (url.pathname === "/api/news") {
