@@ -129,7 +129,7 @@
               />
               <button id="newsletter-submit" type="submit">Join</button>
             </form>
-            <p class="newsletter-help">No spam. No account required. The email product is being wired into a real list now.</p>
+            <p class="newsletter-help">No spam. No account required. Built to become a focused morning scan for business readers.</p>
             <p id="newsletter-status" class="newsletter-status" aria-live="polite"></p>
           </section>
 
@@ -197,6 +197,11 @@
               <section class="story-brief">
                 <p class="section-label">SignalLedger brief</p>
                 <p id="story-summary"></p>
+                <ul id="story-key-points" class="story-key-points"></ul>
+              </section>
+              <section class="story-context">
+                <p class="section-label">Source context</p>
+                <p id="story-source-context"></p>
               </section>
               <section class="story-points">
                 <div>
@@ -224,7 +229,7 @@
             <p class="section-label">About SignalLedger</p>
             <h1>A fast news desk for business readers.</h1>
             <p>
-              SignalLedger is a prototype briefing product for people who want market, technology, business, and
+              SignalLedger is a briefing product for people who want market, technology, business, and
               geopolitical context without opening ten tabs first.
             </p>
           </div>
@@ -241,8 +246,8 @@
               <p class="section-label">Reader control</p>
               <h2>Prefer or hide sources</h2>
               <p>
-                Local source preferences let readers shape the feed without needing an account during the prototype
-                phase.
+                Local source preferences let readers shape the feed without needing an account while the product is
+                still being refined.
               </p>
             </article>
             <article class="method-card">
@@ -259,9 +264,32 @@
             <h2>Editorial differentiation matters.</h2>
             <p>
               The durable version of this product needs stronger curation, cleaner story archives, better market data,
-              and a repeatable email habit. The current site is the working prototype for proving that direction.
+              and a repeatable email habit. The current site is the working product foundation for that direction.
             </p>
           </section>
+        </section>
+
+        <section id="ops-view" class="route-view page-view" hidden>
+          <div class="page-heading about-heading">
+            <p class="section-label">Operations</p>
+            <h1>Feed, storage, and launch readiness.</h1>
+            <p id="ops-summary">
+              Loading current production-readiness diagnostics for feeds, newsletter delivery, and story storage.
+            </p>
+          </div>
+          <div id="ops-readiness" class="ops-grid"></div>
+          <div class="ops-grid ops-diagnostics">
+            <article class="method-card ops-card">
+              <p class="section-label">Feed diagnostics</p>
+              <h2>Source health</h2>
+              <div id="ops-feeds" class="ops-list"></div>
+            </article>
+            <article class="method-card ops-card">
+              <p class="section-label">Market diagnostics</p>
+              <h2>Market provider health</h2>
+              <div id="ops-markets" class="ops-list"></div>
+            </article>
+          </div>
         </section>
       </main>
 
@@ -278,10 +306,12 @@
           <a href="/briefing/today">Today's briefing</a>
           <a href="/topic/markets">Markets</a>
           <a href="/topic/romania">Romania</a>
+          <a href="/ops">Ops</a>
           <a href="mailto:hello@getsignalledger.com">Contact</a>
         </nav>
         <p class="footer-note">
-          Prototype built on public RSS sources. Headlines link to original publishers; market data can be delayed.
+          Built on public RSS sources with direct publisher feeds first. Headlines link to original publishers; market
+          data can be delayed.
         </p>
       </footer>
     </div>

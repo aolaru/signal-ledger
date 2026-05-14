@@ -1,7 +1,7 @@
 {
-  "name": "testwebsite",
+  "name": "signalledger",
   "version": "1.0.0",
-  "description": "Simple Google News website",
+  "description": "SignalLedger business, technology, markets, and world news briefing",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

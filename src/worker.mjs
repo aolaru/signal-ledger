@@ -88,27 +88,39 @@ const fallbackMarkets = [
 const visualPresets = [
   {
     match: /romania|bucharest|cluj|cee/i,
-    url: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?auto=format&fit=crop&w=900&q=80",
+    colors: ["#f6f1df", "#d8baa0", "#7d3f2f"],
+    accent: "#ab5f2c",
+    label: "Romania",
   },
   {
     match: /europe|eu\b|brussels|eurozone/i,
-    url: "https://images.unsplash.com/photo-1491557345352-5929e343eb89?auto=format&fit=crop&w=900&q=80",
+    colors: ["#eef3fa", "#c7d7ef", "#35507a"],
+    accent: "#264b8f",
+    label: "Europe",
   },
   {
     match: /market|stock|economy|fed|inflation|oil|gold|bitcoin|crypto/i,
-    url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=900&q=80",
+    colors: ["#edf6f2", "#c9e0d7", "#0f3f37"],
+    accent: "#0e6b58",
+    label: "Markets",
   },
   {
     match: /tech|ai|artificial intelligence|startup|software|chip/i,
-    url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80",
+    colors: ["#eef2fb", "#cfdaf2", "#273d74"],
+    accent: "#285f9f",
+    label: "Tech",
   },
   {
     match: /world|geopolitics|china|iran|russia|war|defense/i,
-    url: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&w=900&q=80",
+    colors: ["#f8efe8", "#e5c9b8", "#5f2f24"],
+    accent: "#8f4732",
+    label: "World",
   },
   {
     match: /business|company|earnings|deal|ceo/i,
-    url: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80",
+    colors: ["#f5f5ef", "#ddd8c8", "#34322c"],
+    accent: "#5f5b48",
+    label: "Business",
   },
 ];
 
@@ -271,12 +283,52 @@ function buildFeedUrl(topic) {
   return `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
 }
 
-function getVisualUrl(topic, title = "") {
+function escapeXml(value = "") {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function svgToDataUrl(svg) {
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function getVisualPreset(topic, title = "") {
   const haystack = `${topic} ${title}`;
   return (
-    visualPresets.find((preset) => preset.match.test(haystack))?.url ||
-    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80"
+    visualPresets.find((preset) => preset.match.test(haystack)) || {
+      colors: ["#f3f5f0", "#dce2d9", "#38443f"],
+      accent: "#0e6b58",
+      label: "Signal",
+    }
   );
+}
+
+function getSourceBadgeUrl(source = "") {
+  const normalized = source.trim() || "SL";
+  const initials = normalized
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "SL";
+  const hash = hashString(normalized);
+  const hue = parseInt(hash.slice(0, 3), 36) % 360;
+  const background = `hsl(${hue} 45% 92%)`;
+  const border = `hsl(${hue} 38% 74%)`;
+  const text = `hsl(${hue} 52% 26%)`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="26" fill="${background}"/><rect x="8" y="8" width="112" height="112" rx="22" fill="none" stroke="${border}" stroke-width="6"/><text x="64" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="${text}">${escapeXml(initials)}</text></svg>`;
+  return svgToDataUrl(svg);
+}
+
+function getVisualUrl(topic, title = "") {
+  const preset = getVisualPreset(topic, title);
+  const titleLabel = escapeXml(cleanTitle(title).slice(0, 66) || preset.label);
+  const sectionLabel = escapeXml(preset.label);
+  const [background, panel, ink] = preset.colors;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540"><rect width="900" height="540" fill="${background}"/><rect x="44" y="44" width="812" height="452" rx="30" fill="${panel}"/><path d="M76 392C170 330 240 362 338 268s176-120 280-76 142 32 206-24" fill="none" stroke="${preset.accent}" stroke-width="12" stroke-linecap="round"/><path d="M104 420L180 342 250 374 336 278 418 306 506 218 612 248 724 176" fill="none" stroke="${ink}" stroke-opacity="0.45" stroke-width="8" stroke-linecap="round"/><g fill="${ink}" fill-opacity="0.12"><rect x="112" y="244" width="54" height="176" rx="8"/><rect x="188" y="288" width="54" height="132" rx="8"/><rect x="264" y="226" width="54" height="194" rx="8"/><rect x="340" y="316" width="54" height="104" rx="8"/><rect x="416" y="266" width="54" height="154" rx="8"/></g><text x="88" y="122" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="${ink}" fill-opacity="0.72">${sectionLabel}</text><text x="88" y="188" font-family="Georgia, serif" font-size="48" font-weight="700" fill="${ink}">${titleLabel}</text></svg>`;
+  return svgToDataUrl(svg);
 }
 
 function extractClusterSources(description = "", primarySource = "") {
@@ -363,6 +415,42 @@ function rankArticle(article) {
   return scoreArticle(article) + Math.min(6, Math.max(0, (article.clusterCount || 1) - 1)) * 6;
 }
 
+function buildWatchPointText(article) {
+  const text = `${article.title || ""} ${article.description || ""}`.toLowerCase();
+
+  if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/.test(text)) {
+    return "Watch whether the story changes pricing, investor positioning, or expectations in the next market session.";
+  }
+
+  if (/(war|tariff|sanction|election|government|minister|regulation)/.test(text)) {
+    return "Watch for policy responses, official statements, and second-order effects for companies exposed to the region.";
+  }
+
+  if (/(ai|chip|software|startup|technology|app)/.test(text)) {
+    return "Watch for product, regulatory, or capital-allocation signals that show whether this becomes a durable technology trend.";
+  }
+
+  return "Watch whether other credible sources confirm the direction and whether the story develops beyond the first headline.";
+}
+
+function getStoryAngle(article, fallbackTopic) {
+  const text = `${article.title || ""} ${article.description || ""}`.toLowerCase();
+
+  if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/.test(text)) {
+    return "market positioning";
+  }
+
+  if (/(war|tariff|sanction|election|government|minister|regulation|geopolitic)/.test(text)) {
+    return "policy and geopolitical risk";
+  }
+
+  if (/(ai|chip|software|startup|technology|app)/.test(text)) {
+    return "technology adoption and capital allocation";
+  }
+
+  return `${fallbackTopic.toLowerCase()} agenda`;
+}
+
 function getWhyItMatters(article, fallbackTopic) {
   const cleanDescription = stripHtml(article.description || "");
   const firstSentence = cleanDescription.split(/(?<=[.!?])\s+/)[0];
@@ -372,6 +460,31 @@ function getWhyItMatters(article, fallbackTopic) {
   }
 
   return `This is moving the ${fallbackTopic.toLowerCase()} conversation and is worth tracking today.`;
+}
+
+function buildBriefSummary(article, fallbackTopic) {
+  const angle = getStoryAngle(article, fallbackTopic);
+  return `${article.source || "The source"} frames this as a ${angle} story. ${getWhyItMatters(article, fallbackTopic)}`;
+}
+
+function buildSourceContext(article) {
+  if (article.clusterCount > 1 && article.clusterSources?.length) {
+    return `${article.clusterCount} sources in the current briefing snapshot are tracking this story: ${article.clusterSources
+      .slice(0, 4)
+      .join(", ")}.`;
+  }
+
+  return `${article.source || "The source"} is the primary source surfaced in the current briefing snapshot.`;
+}
+
+function buildKeyPoints(article, fallbackTopic) {
+  const description = stripHtml(article.description || "");
+  const firstPoint = description.length > 170 ? `${description.slice(0, 167)}...` : description;
+  return [
+    firstPoint || `What happened: ${cleanTitle(article.title || "This story is developing")}.`,
+    `Why it matters: ${getWhyItMatters(article, fallbackTopic)}`,
+    `What to watch: ${buildWatchPointText(article)}`,
+  ];
 }
 
 function buildArticle(item, topic, sourceFallback, provider) {
@@ -402,9 +515,7 @@ function buildArticle(item, topic, sourceFallback, provider) {
     publishedAt: item.pubDate || item.published || item.updated || "",
     source,
     sourceUrl,
-    imageUrl: sourceUrl
-      ? `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(sourceUrl)}&sz=128`
-      : "/favicon.svg",
+    imageUrl: getSourceBadgeUrl(source),
     visualUrl: getVisualUrl(topic, title),
     clusterSources,
     clusterCount: clusterSources.length,
@@ -415,6 +526,11 @@ function buildArticle(item, topic, sourceFallback, provider) {
   return {
     ...article,
     whyItMatters: getWhyItMatters(article, topic || "Top stories"),
+    briefSummary: buildBriefSummary(article, topic || "Top stories"),
+    watchPoint: buildWatchPointText(article),
+    sourceContext: buildSourceContext(article),
+    keyPoints: buildKeyPoints(article, topic || "Top stories"),
+    angle: getStoryAngle(article, topic || "Top stories"),
   };
 }
 
@@ -919,6 +1035,33 @@ function getConfiguredFeeds() {
   }));
 }
 
+function getReadiness(env) {
+  return [
+    {
+      name: "Story storage",
+      status: env.STORY_BRIEFS ? "ready" : "action-needed",
+      detail: env.STORY_BRIEFS
+        ? "Cloudflare KV is configured for permanent story pages."
+        : "Configure STORY_BRIEFS KV to move story pages fully off URL-encoded fallback links.",
+    },
+    {
+      name: "Newsletter provider",
+      status: getActiveNewsletterProvider(env) === "local-prototype" ? "action-needed" : "ready",
+      detail:
+        getActiveNewsletterProvider(env) === "local-prototype"
+          ? "Configure Buttondown, Kit, or a newsletter webhook before launch."
+          : `Newsletter signups are forwarded to ${getActiveNewsletterProvider(env)}.`,
+    },
+    {
+      name: "Signup storage",
+      status: env.NEWSLETTER_SIGNUPS ? "ready" : "advisory",
+      detail: env.NEWSLETTER_SIGNUPS
+        ? "Newsletter signups are also stored in Cloudflare KV."
+        : "NEWSLETTER_SIGNUPS KV is optional but recommended for audit and backup.",
+    },
+  ];
+}
+
 function getHealthReport(env) {
   const googleFallback = getDiagnosticSnapshot(feedDiagnostics).filter((entry) => entry.provider === "google-news");
 
@@ -933,6 +1076,7 @@ function getHealthReport(env) {
       provider: getActiveNewsletterProvider(env),
       signupStorage: env.NEWSLETTER_SIGNUPS ? "cloudflare-kv" : "none",
     },
+    readiness: getReadiness(env),
     feeds: [...getConfiguredFeeds(), ...googleFallback],
     markets: getDiagnosticSnapshot(marketDiagnostics),
   };
@@ -995,7 +1139,7 @@ async function handleApi(request, env, ctx) {
         ok: true,
         message:
           storage.provider === "local-prototype"
-            ? "Subscription captured locally. Configure a newsletter provider to send subscribers to a real list."
+            ? "Signup saved locally. Configure a newsletter provider to send subscribers to a real list."
             : `Subscription forwarded to ${storage.provider}.`,
         storage: storage.storage,
         provider: storage.provider,
@@ -1026,6 +1170,7 @@ export default {
       url.pathname.startsWith("/topic/") ||
       url.pathname.startsWith("/story/") ||
       url.pathname === "/about" ||
+      url.pathname === "/ops" ||
       url.pathname === "/briefing/today"
     ) {
       const indexUrl = new URL("/", url);

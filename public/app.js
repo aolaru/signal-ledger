@@ -32,6 +32,7 @@ const homeView = document.getElementById("home-view");
 const todayView = document.getElementById("today-view");
 const storyView = document.getElementById("story-view");
 const aboutView = document.getElementById("about-view");
+const opsView = document.getElementById("ops-view");
 const todaySummary = document.getElementById("today-summary");
 const todayLead = document.getElementById("today-lead");
 const todayGrid = document.getElementById("today-grid");
@@ -41,10 +42,16 @@ const storyKicker = document.getElementById("story-kicker");
 const storyTitle = document.getElementById("story-title");
 const storyMeta = document.getElementById("story-meta");
 const storySummary = document.getElementById("story-summary");
+const storyKeyPoints = document.getElementById("story-key-points");
+const storySourceContext = document.getElementById("story-source-context");
 const storyWhy = document.getElementById("story-why");
 const storyWatch = document.getElementById("story-watch");
 const storyOriginalLink = document.getElementById("story-original-link");
 const newsletterSubmit = document.getElementById("newsletter-submit");
+const opsSummary = document.getElementById("ops-summary");
+const opsReadiness = document.getElementById("ops-readiness");
+const opsFeeds = document.getElementById("ops-feeds");
+const opsMarkets = document.getElementById("ops-markets");
 
 let currentTopic = "";
 let latestBriefing = null;
@@ -323,6 +330,11 @@ function getStoryPayload(article) {
     clusterCount: article.clusterCount,
     clusterSources: article.clusterSources,
     label: getStoryLabel(article),
+    briefSummary: article.briefSummary,
+    watchPoint: article.watchPoint,
+    sourceContext: article.sourceContext,
+    keyPoints: article.keyPoints,
+    angle: article.angle,
   };
 }
 
@@ -343,6 +355,10 @@ function getStoryUrl(article) {
 }
 
 function buildStorySummary(article) {
+  if (article.briefSummary) {
+    return article.briefSummary;
+  }
+
   const source = article.source || "the original source";
   const title = cleanTitle(article.title || "This story");
   const context = article.whyItMatters || article.description || "The story is still developing.";
@@ -351,6 +367,10 @@ function buildStorySummary(article) {
 }
 
 function buildWatchPoint(article) {
+  if (article.watchPoint) {
+    return article.watchPoint;
+  }
+
   const text = `${article.title || ""} ${article.description || ""}`.toLowerCase();
 
   if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/.test(text)) {
@@ -366,6 +386,18 @@ function buildWatchPoint(article) {
   }
 
   return "Watch whether other credible sources confirm the direction and whether the story develops beyond the first headline.";
+}
+
+function buildSourceContext(article) {
+  if (article.sourceContext) {
+    return article.sourceContext;
+  }
+
+  if (article.clusterCount > 1 && article.clusterSources?.length) {
+    return `${article.clusterCount} sources are tracking this story: ${article.clusterSources.slice(0, 4).join(", ")}.`;
+  }
+
+  return `${article.source || "The source"} is the primary source surfaced in the current briefing snapshot.`;
 }
 
 function setNewsletterStatus(message, state = "info") {
@@ -403,6 +435,7 @@ function showView(viewName) {
   todayView.hidden = viewName !== "today";
   storyView.hidden = viewName !== "story";
   aboutView.hidden = viewName !== "about";
+  opsView.hidden = viewName !== "ops";
 }
 
 function setStatus(message, isError = false) {
@@ -508,7 +541,7 @@ function createCard(article) {
   fragment.querySelector(".card-source").textContent = article.source;
   fragment.querySelector(".card-title").textContent = article.title;
   fragment.querySelector(".card-description").textContent =
-    article.whyItMatters || article.description || "This story is developing.";
+    article.briefSummary || article.whyItMatters || article.description || "This story is developing.";
   fragment.querySelector(".card-date").textContent = formatDate(article.publishedAt);
 
   const clusterLabel = fragment.querySelector(".cluster-label");
@@ -608,7 +641,7 @@ function renderLead(article) {
   title.textContent = article.title;
 
   const summary = document.createElement("p");
-  summary.textContent = article.whyItMatters || article.description || "This story is developing.";
+  summary.textContent = article.briefSummary || article.whyItMatters || article.description || "This story is developing.";
 
   const link = document.createElement("a");
   link.className = "lead-link";
@@ -768,7 +801,7 @@ function refreshCurrentNews() {
   }
 
   const route = getRoute();
-  if (route.type === "about" || route.type === "story") {
+  if (route.type === "about" || route.type === "story" || route.type === "ops") {
     return;
   }
 
@@ -805,6 +838,10 @@ function getTopicFromPath() {
 function getRoute() {
   if (window.location.pathname === "/about") {
     return { type: "about" };
+  }
+
+  if (window.location.pathname === "/ops") {
+    return { type: "ops" };
   }
 
   if (window.location.pathname === "/briefing/today") {
@@ -857,8 +894,16 @@ function renderStoryPage(article) {
   storyTitle.textContent = title;
   storyMeta.textContent = `${source}${published ? ` · ${published}` : ""}`;
   storySummary.textContent = buildStorySummary(article);
+  storySourceContext.textContent = buildSourceContext(article);
   storyWhy.textContent = article.whyItMatters || article.description || "This story is developing.";
   storyWatch.textContent = buildWatchPoint(article);
+  storyKeyPoints.innerHTML = "";
+  for (const point of article.keyPoints || []) {
+    const item = document.createElement("li");
+    item.textContent = point;
+    storyKeyPoints.appendChild(item);
+  }
+  storyKeyPoints.hidden = storyKeyPoints.children.length === 0;
   storyOriginalLink.href = article.link || "#";
   storyOriginalLink.hidden = !article.link;
   storyOriginalLink.textContent = `Read original article on ${source}`;
@@ -896,8 +941,11 @@ function renderMissingStory(title, summary, why, watch) {
   storyTitle.textContent = title;
   storyMeta.textContent = "";
   storySummary.textContent = summary;
+  storySourceContext.textContent = "";
   storyWhy.textContent = why;
   storyWatch.textContent = watch;
+  storyKeyPoints.innerHTML = "";
+  storyKeyPoints.hidden = true;
   storyOriginalLink.hidden = true;
   setPageMeta(`Story unavailable | ${siteName}`, defaultDescription, {
     path: window.location.pathname + window.location.search,
@@ -1123,11 +1171,102 @@ function loadAbout() {
   });
 }
 
+function renderOpsList(container, items, emptyMessage) {
+  container.innerHTML = "";
+
+  if (!items?.length) {
+    const empty = document.createElement("p");
+    empty.className = "ops-empty";
+    empty.textContent = emptyMessage;
+    container.appendChild(empty);
+    return;
+  }
+
+  for (const item of items) {
+    const row = document.createElement("article");
+    row.className = "ops-item";
+
+    const heading = document.createElement("div");
+    heading.className = "ops-item-header";
+
+    const title = document.createElement("strong");
+    title.textContent = item.name || item.label || item.key;
+
+    const status = document.createElement("span");
+    status.className = `ops-status ${item.status || "info"}`;
+    status.textContent = item.status || "info";
+
+    const detail = document.createElement("p");
+    detail.textContent =
+      item.detail ||
+      item.lastError ||
+      [item.provider, item.latencyMs ? `${item.latencyMs}ms` : "", item.articleCount ? `${item.articleCount} stories` : ""]
+        .filter(Boolean)
+        .join(" · ");
+
+    heading.append(title, status);
+    row.append(heading, detail);
+    container.appendChild(row);
+  }
+}
+
+async function loadOps() {
+  showView("ops");
+  currentTopic = "";
+  latestSearchArticles = [];
+  updateTopicExperience("");
+  updateActiveNavigation();
+  setPageMeta(`Operations | ${siteName}`, "Operational diagnostics for SignalLedger feeds, storage, and newsletter delivery.", {
+    path: "/ops",
+  });
+  setStructuredData({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: `Operations | ${siteName}`,
+    description: "Operational diagnostics for SignalLedger feeds, storage, and newsletter delivery.",
+    url: getAbsoluteUrl("/ops"),
+  });
+
+  opsSummary.textContent = "Loading production-readiness diagnostics...";
+  opsReadiness.innerHTML = "";
+  renderOpsList(opsFeeds, [], "No feed diagnostics yet.");
+  renderOpsList(opsMarkets, [], "No market diagnostics yet.");
+
+  try {
+    const response = await fetch(`/api/health?v=${apiVersion}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.details || data.error || "Could not load operations data.");
+    }
+
+    const readiness = data.readiness || [];
+    const launchReady = readiness.every((item) => item.status === "ready" || item.status === "advisory");
+    opsSummary.textContent = launchReady
+      ? "Core production systems are configured. Review source health and fallback usage below."
+      : "Production setup still has required actions before launch. Review the readiness cards below.";
+
+    renderOpsList(opsReadiness, readiness, "No readiness items available.");
+    renderOpsList(opsFeeds, data.feeds, "No feed diagnostics available yet.");
+    renderOpsList(opsMarkets, data.markets, "No market diagnostics available yet.");
+  } catch (error) {
+    opsSummary.textContent = error.message;
+    renderOpsList(opsReadiness, [], "No readiness items available.");
+    renderOpsList(opsFeeds, [], "No feed diagnostics available yet.");
+    renderOpsList(opsMarkets, [], "No market diagnostics available yet.");
+  }
+}
+
 async function loadRoute() {
   const route = getRoute();
 
   if (route.type === "about") {
     loadAbout();
+    return;
+  }
+
+  if (route.type === "ops") {
+    await loadOps();
     return;
   }
 

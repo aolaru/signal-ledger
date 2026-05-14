@@ -168,6 +168,7 @@ describe("Worker API", () => {
     assert.equal(response.status, 200);
     assert.equal(body.storyStorage.provider, "url-fallback");
     assert.equal(body.newsletter.provider, "local-prototype");
+    assert.equal(body.readiness[0].status, "action-needed");
     assert.ok(body.feeds.length >= 1);
   });
 
@@ -232,7 +233,7 @@ describe("Worker API", () => {
   });
 
   it("serves the SPA shell for client-side routes", async () => {
-    for (const path of ["/topic/markets", "/story/sample-brief", "/about", "/briefing/today"]) {
+    for (const path of ["/topic/markets", "/story/sample-brief", "/about", "/ops", "/briefing/today"]) {
       const response = await worker.fetch(new Request(`https://signal-ledger.test${path}`), env, ctx);
 
       assert.equal(response.status, 200);

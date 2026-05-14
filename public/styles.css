@@ -768,6 +768,33 @@ h3 {
   line-height: 1.35;
 }
 
+.story-key-points {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.story-key-points[hidden] {
+  display: none;
+}
+
+.story-key-points li + li {
+  margin-top: 8px;
+}
+
+.story-context {
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcf9;
+}
+
+.story-context p:last-child {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
 .story-points {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1110,6 +1137,96 @@ h3 {
   font-size: 0.84rem;
 }
 
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.ops-diagnostics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ops-card {
+  min-height: 100%;
+}
+
+.ops-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.ops-item {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.ops-item:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.ops-grid > .ops-item {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 30px rgba(20, 24, 23, 0.05);
+}
+
+.ops-grid > .ops-item:first-child {
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.ops-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ops-item p,
+.ops-empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.ops-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ops-status.ready,
+.ops-status.ok,
+.ops-status.success {
+  color: #0c5d4d;
+  background: rgba(14, 107, 88, 0.12);
+}
+
+.ops-status.action-needed,
+.ops-status.error {
+  color: #9b2d28;
+  background: rgba(155, 45, 40, 0.12);
+}
+
+.ops-status.advisory,
+.ops-status.pending,
+.ops-status.info {
+  color: #80521c;
+  background: rgba(197, 106, 44, 0.14);
+}
+
 .skeleton-card,
 .skeleton-market,
 .skeleton-list-item {
@@ -1231,6 +1348,11 @@ h3 {
   }
 
   .method-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-grid,
+  .ops-diagnostics {
     grid-template-columns: 1fr;
   }
 
