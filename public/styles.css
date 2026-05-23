@@ -325,7 +325,7 @@ h3 {
 }
 
 .market-pulse {
-  margin-bottom: 30px;
+  margin: 8px 0 24px;
 }
 
 .pulse-header {
@@ -341,14 +341,14 @@ h3 {
 
 .market-strip {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1px;
   background: var(--line);
   border: 1px solid var(--line);
 }
 
 .market-card {
-  padding: 16px;
+  padding: 14px 16px;
   background: var(--surface);
 }
 
@@ -431,7 +431,7 @@ h3 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  margin: 0 0 30px;
+  margin: 34px 0 0;
   padding: 18px;
   border: 1px solid var(--line);
   background: var(--ink);
@@ -607,10 +607,7 @@ h3 {
 }
 
 .today-lead .news-card {
-  min-height: 280px;
-  display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
-  align-items: start;
+  min-height: unset;
 }
 
 .today-lead .story-visual {
@@ -638,7 +635,7 @@ h3 {
 }
 
 .today-lead .card-title {
-  font-size: clamp(2rem, 4vw, 3.8rem);
+  font-size: clamp(1.7rem, 3vw, 2.6rem);
 }
 
 .today-layout {
@@ -707,21 +704,14 @@ h3 {
 
 .story-page-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(360px, 1fr);
+  grid-template-columns: minmax(0, 820px);
   gap: 28px;
   align-items: start;
+  justify-content: center;
 }
 
 .story-page-visual {
-  position: sticky;
-  top: 24px;
-  min-height: 520px;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-soft);
-  box-shadow: var(--shadow);
+  display: none;
 }
 
 .story-page-visual img {
@@ -743,7 +733,7 @@ h3 {
 .story-page-body h1 {
   max-width: none;
   margin: 14px 0 12px;
-  font-size: clamp(2.6rem, 5vw, 4.8rem);
+  font-size: clamp(2.35rem, 4vw, 3.8rem);
 }
 
 .story-meta,
@@ -760,7 +750,7 @@ h3 {
   background: var(--surface-soft);
 }
 
-.story-brief p:last-child {
+.story-brief #story-summary {
   margin: 8px 0 0;
   color: var(--ink);
   font-family: "Source Serif 4", serif;
@@ -906,10 +896,10 @@ h3 {
 
 .news-card {
   min-width: 0;
-  min-height: 292px;
+  min-height: 214px;
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 12px;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -955,8 +945,6 @@ h3 {
 .card-topline {
   justify-content: space-between;
   gap: 10px;
-  padding-top: 2px;
-  border-top: 1px solid rgba(217, 222, 217, 0.7);
 }
 
 .card-date {
@@ -1002,13 +990,13 @@ h3 {
 .card-description {
   margin: 0;
   color: var(--muted);
-  font-size: 0.94rem;
+  font-size: 0.96rem;
   line-height: 1.5;
 }
 
 .card-actions {
   margin-top: auto;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   align-items: center;
   position: relative;
@@ -1069,7 +1057,7 @@ h3 {
 }
 
 .section-block .news-card {
-  min-height: 230px;
+  min-height: 210px;
 }
 
 .section-block .source-visual {
@@ -1225,6 +1213,24 @@ h3 {
 .ops-status.info {
   color: #80521c;
   background: rgba(197, 106, 44, 0.14);
+}
+
+#home-view[data-mode="topic"] .briefing-hero,
+#home-view[data-mode="topic"] .market-pulse,
+#home-view[data-mode="topic"] .topic-bar,
+#home-view[data-mode="topic"] .newsletter-panel,
+#home-view[data-mode="topic"] #sections {
+  display: none;
+}
+
+#home-view[data-mode="topic"] .topic-panel {
+  margin-top: 34px;
+}
+
+#home-view[data-mode="topic"] .search-section {
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
 }
 
 .skeleton-card,
@@ -1499,6 +1505,6 @@ h3 {
 
 @media (max-width: 480px) {
   .market-strip {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 }

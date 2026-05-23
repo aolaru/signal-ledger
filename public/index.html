@@ -53,26 +53,15 @@
         </a>
         <nav class="nav-tabs" aria-label="Briefing sections">
           <a href="/briefing/today" data-nav="today">Today</a>
-          <a href="/#business" data-nav="business">Business</a>
-          <a href="/#tech" data-nav="tech">Tech</a>
-          <a href="/#markets" data-nav="markets">Markets</a>
-          <a href="/#world" data-nav="world">World</a>
-          <a href="/#europe" data-nav="europe">Europe</a>
-          <a href="/#romania" data-nav="romania">Romania</a>
+          <a href="/topic/artificial-intelligence" data-nav="artificial-intelligence">AI</a>
+          <a href="/topic/markets" data-nav="markets">Markets</a>
+          <a href="/topic/romania" data-nav="romania">Romania</a>
           <a href="/about" data-nav="about">About</a>
         </nav>
       </header>
 
       <main>
-        <section id="home-view" class="route-view">
-          <section class="market-pulse" aria-label="Market pulse">
-            <div class="pulse-header">
-              <p class="section-label">Market pulse</p>
-              <span id="market-status">Loading live data...</span>
-            </div>
-            <div id="market-strip" class="market-strip"></div>
-          </section>
-
+        <section id="home-view" class="route-view" data-mode="briefing">
           <section class="briefing-hero">
             <div class="lead-panel">
               <div class="lead-heading">
@@ -94,6 +83,14 @@
             </aside>
           </section>
 
+          <section class="market-pulse" aria-label="Market snapshot">
+            <div class="pulse-header">
+              <p class="section-label">Market snapshot</p>
+              <span id="market-status">Loading live data...</span>
+            </div>
+            <div id="market-strip" class="market-strip"></div>
+          </section>
+
           <section class="topic-bar" aria-label="Featured topics">
             <a href="/topic/artificial-intelligence">AI</a>
             <a href="/topic/markets">Markets</a>
@@ -107,30 +104,6 @@
             <p class="section-label">Topic briefing</p>
             <h2 id="topic-title"></h2>
             <p id="topic-description"></p>
-          </section>
-
-          <section class="newsletter-panel">
-            <div>
-              <p class="section-label">Morning briefing</p>
-              <h2>Get SignalLedger by email.</h2>
-              <p class="newsletter-copy">
-                A tighter daily scan of markets, business, tech, and geopolitical signal. Original reporting stays with
-                the publisher.
-              </p>
-            </div>
-            <form id="newsletter-form" class="newsletter-form">
-              <input
-                id="newsletter-email"
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                autocomplete="email"
-                required
-              />
-              <button id="newsletter-submit" type="submit">Join</button>
-            </form>
-            <p class="newsletter-help">No spam. No account required. Built to become a focused morning scan for business readers.</p>
-            <p id="newsletter-status" class="newsletter-status" aria-live="polite"></p>
           </section>
 
           <section class="search-section">
@@ -158,6 +131,30 @@
           </div>
           <section id="search-results" class="news-grid" aria-live="polite"></section>
           <section id="sections" class="sections" aria-live="polite"></section>
+
+          <section class="newsletter-panel">
+            <div>
+              <p class="section-label">Morning briefing</p>
+              <h2>Get SignalLedger by email.</h2>
+              <p class="newsletter-copy">
+                A tighter daily scan of markets, business, tech, and geopolitical signal. Original reporting stays with
+                the publisher.
+              </p>
+            </div>
+            <form id="newsletter-form" class="newsletter-form">
+              <input
+                id="newsletter-email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+                required
+              />
+              <button id="newsletter-submit" type="submit">Join</button>
+            </form>
+            <p class="newsletter-help">No spam. No account required.</p>
+            <p id="newsletter-status" class="newsletter-status" aria-live="polite"></p>
+          </section>
         </section>
 
         <section id="today-view" class="route-view page-view" hidden>
@@ -199,11 +196,11 @@
                 <p id="story-summary"></p>
                 <ul id="story-key-points" class="story-key-points"></ul>
               </section>
-              <section class="story-context">
+              <section class="story-context" hidden>
                 <p class="section-label">Source context</p>
                 <p id="story-source-context"></p>
               </section>
-              <section class="story-points">
+              <section class="story-points" hidden>
                 <div>
                   <p class="section-label">Why it matters</p>
                   <p id="story-why"></p>
@@ -306,7 +303,6 @@
           <a href="/briefing/today">Today's briefing</a>
           <a href="/topic/markets">Markets</a>
           <a href="/topic/romania">Romania</a>
-          <a href="/ops">Ops</a>
           <a href="mailto:hello@getsignalledger.com">Contact</a>
         </nav>
         <p class="footer-note">
@@ -318,30 +314,14 @@
 
     <template id="card-template">
       <article class="news-card">
-        <div class="story-visual">
-          <img class="card-image" alt="" loading="lazy" />
-        </div>
-        <div class="source-visual" aria-hidden="true">
-          <img class="source-logo" alt="" loading="lazy" />
-        </div>
-        <p class="story-label"></p>
         <div class="card-topline">
           <p class="card-source"></p>
           <time class="card-date"></time>
         </div>
         <h3 class="card-title"></h3>
-        <p class="why-label">Why it matters</p>
-        <p class="cluster-label"></p>
         <p class="card-description"></p>
         <div class="card-actions">
           <a class="card-link">Read brief</a>
-          <div class="source-menu">
-            <button class="source-menu-button" type="button" aria-haspopup="true">Source</button>
-            <div class="source-menu-popover">
-              <button class="prefer-source-button" type="button">Prefer source</button>
-              <button class="hide-source-button" type="button">Hide source</button>
-            </div>
-          </div>
         </div>
       </article>
     </template>

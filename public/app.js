@@ -64,6 +64,10 @@ const siteUrl = "https://getsignalledger.com";
 const siteName = "SignalLedger";
 const newsRefreshMs = 10 * 60 * 1000;
 const marketRefreshMs = 60 * 1000;
+const fastBriefingLimit = 5;
+const homeSectionLimit = 4;
+const homeStoriesPerSection = 2;
+const featuredMarketKeys = new Set(["spx", "nasdaq", "btc"]);
 let lastNewsRefreshAt = 0;
 let marketRefreshTimer;
 let newsRefreshTimer;
@@ -438,6 +442,10 @@ function showView(viewName) {
   opsView.hidden = viewName !== "ops";
 }
 
+function setHomeMode(mode = "briefing") {
+  homeView.dataset.mode = mode;
+}
+
 function setStatus(message, isError = false) {
   statusText.textContent = message;
   statusText.classList.toggle("status-error", isError);
@@ -529,74 +537,16 @@ function renderBriefingSkeleton() {
 function createCard(article) {
   const fragment = cardTemplate.content.cloneNode(true);
   const card = fragment.querySelector(".news-card");
-  const logo = fragment.querySelector(".source-logo");
-  const image = fragment.querySelector(".card-image");
 
   card.dataset.source = article.source;
-  logo.src = article.imageUrl || "/favicon.svg";
-  logo.alt = `${article.source} logo`;
-  image.src = article.visualUrl || "/favicon.svg";
-  image.alt = "";
-  fragment.querySelector(".story-label").textContent = getStoryLabel(article);
   fragment.querySelector(".card-source").textContent = article.source;
   fragment.querySelector(".card-title").textContent = article.title;
   fragment.querySelector(".card-description").textContent =
     article.briefSummary || article.whyItMatters || article.description || "This story is developing.";
   fragment.querySelector(".card-date").textContent = formatDate(article.publishedAt);
 
-  const clusterLabel = fragment.querySelector(".cluster-label");
-  if (article.clusterCount > 1) {
-    const sources = article.clusterSources?.slice(0, 3).join(", ");
-    clusterLabel.textContent = `${article.clusterCount} sources tracking this: ${sources}`;
-  } else {
-    clusterLabel.remove();
-  }
-
   const link = fragment.querySelector(".card-link");
   link.href = getStoryUrl(article);
-
-  const sourceMenu = fragment.querySelector(".source-menu");
-  const sourceMenuButton = sourceMenu.querySelector(".source-menu-button");
-  const preferButton = fragment.querySelector(".prefer-source-button");
-  preferButton.textContent = preferredSources.has(article.source) ? "Preferred" : "Prefer source";
-  sourceMenuButton.setAttribute("aria-label", `Source options for ${article.source}`);
-
-  sourceMenuButton.addEventListener("click", () => {
-    sourceMenu.toggleAttribute("data-open");
-  });
-
-  document.addEventListener(
-    "click",
-    (event) => {
-      if (!sourceMenu.contains(event.target)) {
-        sourceMenu.removeAttribute("data-open");
-      }
-    },
-    { once: true },
-  );
-
-  preferButton.addEventListener("click", () => {
-    if (preferredSources.has(article.source)) {
-      preferredSources.delete(article.source);
-    } else {
-      preferredSources.add(article.source);
-      hiddenSources.delete(article.source);
-    }
-
-    savePreferredSources();
-    saveHiddenSources();
-    sourceMenu.removeAttribute("data-open");
-    rerenderCurrentView();
-  });
-
-  fragment.querySelector(".hide-source-button").addEventListener("click", () => {
-    hiddenSources.add(article.source);
-    preferredSources.delete(article.source);
-    saveHiddenSources();
-    savePreferredSources();
-    sourceMenu.removeAttribute("data-open");
-    rerenderCurrentView();
-  });
 
   return fragment;
 }
@@ -660,7 +610,7 @@ function renderLead(article) {
 function renderFastBriefing(articles) {
   briefingList.innerHTML = "";
 
-  for (const article of getVisibleArticles(articles)) {
+  for (const article of getVisibleArticles(articles).slice(0, fastBriefingLimit)) {
     const item = document.createElement("li");
     const link = document.createElement("a");
     link.href = getStoryUrl(article);
@@ -674,10 +624,12 @@ function renderFastBriefing(articles) {
   }
 }
 
-function renderSections(sections) {
+function renderSections(sections, options = {}) {
   sectionsContainer.innerHTML = "";
+  const sectionLimit = options.sectionLimit || homeSectionLimit;
+  const storiesPerSection = options.storiesPerSection || homeStoriesPerSection;
 
-  for (const section of sections) {
+  for (const section of sections.slice(0, sectionLimit)) {
     const block = document.createElement("section");
     block.className = "section-block";
     block.id = section.key;
@@ -693,7 +645,7 @@ function renderSections(sections) {
 
     const grid = document.createElement("div");
     grid.className = "news-grid";
-    renderArticleGrid(grid, getVisibleArticles(section.articles).slice(0, 3));
+    renderArticleGrid(grid, getVisibleArticles(section.articles).slice(0, storiesPerSection));
 
     header.append(heading, deck);
     block.append(header, grid);
@@ -720,16 +672,17 @@ function collectBriefingArticles(data) {
 
 function renderTodayBriefing(data) {
   const visibleArticles = getVisibleArticles(collectBriefingArticles(data));
-  todaySummary.textContent = `${visibleArticles.length} stories selected from the latest briefing. Updated ${formatDate(
+  const displayedArticles = visibleArticles.slice(0, 10);
+  todaySummary.textContent = `${displayedArticles.length} top stories from the latest briefing. Updated ${formatDate(
     data.generatedAt,
   )}.`;
   todayLead.innerHTML = "";
 
-  if (visibleArticles[0]) {
-    todayLead.appendChild(createCard(visibleArticles[0]));
+  if (displayedArticles[0]) {
+    todayLead.appendChild(createCard(displayedArticles[0]));
   }
 
-  renderArticleGrid(todayGrid, visibleArticles.slice(1, 10));
+  renderArticleGrid(todayGrid, displayedArticles.slice(1));
   updateSourceControls();
 }
 
@@ -741,6 +694,8 @@ function renderMarkets(markets) {
     return;
   }
 
+  const featuredMarkets = markets.filter((market) => featuredMarketKeys.has(market.key)).slice(0, 3);
+  const displayedMarkets = featuredMarkets.length ? featuredMarkets : markets.slice(0, 3);
   const latestUpdate = markets
     .map((market) => new Date(market.updatedAt))
     .filter((date) => !Number.isNaN(date.getTime()))
@@ -753,7 +708,7 @@ function renderMarkets(markets) {
       ? `Updated ${formatDate(latestUpdate)}`
       : "Live data";
 
-  for (const market of markets) {
+  for (const market of displayedMarkets) {
     const card = document.createElement("article");
     const direction = market.percentChange >= 0 ? "up" : "down";
     card.className = `market-card ${direction}`;
@@ -1018,7 +973,7 @@ function rerenderCurrentView() {
 
   if (latestBriefing && route.type === "today") {
     renderTodayBriefing(latestBriefing);
-  } else if (latestBriefing) {
+  } else if (latestBriefing && route.type !== "topic") {
     renderFastBriefing(latestBriefing.fastBriefing);
     renderSections(latestBriefing.sections);
   }
@@ -1032,6 +987,7 @@ function rerenderCurrentView() {
 
 async function loadBriefing() {
   showView("home");
+  setHomeMode("briefing");
   updateActiveNavigation();
   setStatus("Loading briefing...");
   searchResults.innerHTML = "";
@@ -1075,10 +1031,12 @@ async function loadBriefing() {
 async function loadSearch(topic = "") {
   showView("home");
   currentTopic = topic.trim();
+  setHomeMode(currentTopic ? "topic" : "briefing");
   updateTopicExperience(currentTopic);
   updateActiveNavigation();
   setStatus("Searching...");
   renderSkeletonGrid(searchResults, 3);
+  sectionsContainer.innerHTML = "";
 
   const params = new URLSearchParams();
   if (currentTopic) {
@@ -1096,7 +1054,7 @@ async function loadSearch(topic = "") {
     }
 
     latestSearchArticles = data.articles;
-    feedTitle.textContent = currentTopic ? `Search: ${currentTopic}` : "Search briefing";
+    feedTitle.textContent = currentTopic ? `Latest on ${humanizeTopic(currentTopic)}` : "Search briefing";
     setStatus(`${getVisibleArticles(data.articles).length} stories loaded`);
     setLastUpdated();
     renderArticleGrid(searchResults, getVisibleArticles(data.articles).slice(0, 8));
@@ -1282,7 +1240,6 @@ async function loadRoute() {
 
   if (route.type === "topic") {
     topicInput.value = route.topic;
-    await loadBriefing();
     await loadSearch(route.topic);
     return;
   }
@@ -1296,8 +1253,12 @@ searchForm.addEventListener("submit", (event) => {
   const topic = topicInput.value.trim();
   if (topic) {
     window.history.pushState({}, "", `/topic/${encodeURIComponent(topic.toLowerCase().replace(/\s+/g, "-"))}`);
+    loadRoute();
+    return;
   }
-  loadSearch(topicInput.value);
+
+  window.history.pushState({}, "", "/");
+  loadBriefing();
 });
 
 refreshButton.addEventListener("click", () => {
