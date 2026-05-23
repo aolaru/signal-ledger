@@ -604,7 +604,7 @@ h3 {
 
 .today-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 28px;
   align-items: start;
 }
