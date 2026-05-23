@@ -11,9 +11,7 @@ const leadStory = document.getElementById("lead-story");
 const briefingList = document.getElementById("briefing-list");
 const marketStrip = document.getElementById("market-strip");
 const marketStatus = document.getElementById("market-status");
-const sourceControls = document.getElementById("source-controls");
-const hiddenCount = document.getElementById("hidden-count");
-const resetSources = document.getElementById("reset-sources");
+const newsletterPanel = document.getElementById("newsletter-panel");
 const newsletterForm = document.getElementById("newsletter-form");
 const newsletterEmail = document.getElementById("newsletter-email");
 const newsletterStatus = document.getElementById("newsletter-status");
@@ -56,10 +54,8 @@ const opsMarkets = document.getElementById("ops-markets");
 let currentTopic = "";
 let latestBriefing = null;
 let latestSearchArticles = [];
-let hiddenSources = new Set(JSON.parse(localStorage.getItem("hiddenSources") || "[]"));
-let preferredSources = new Set(JSON.parse(localStorage.getItem("preferredSources") || "[]"));
 const savedEmail = localStorage.getItem("newsletterEmail");
-const apiVersion = "2026-05-12-hybrid-v1";
+const apiVersion = "2026-05-23-simplified-v1";
 const siteUrl = "https://getsignalledger.com";
 const siteName = "SignalLedger";
 const newsRefreshMs = 10 * 60 * 1000;
@@ -154,28 +150,7 @@ function formatMarketValue(market) {
 }
 
 function getVisibleArticles(articles) {
-  return articles
-    .filter((article) => !hiddenSources.has(article.source))
-    .sort((first, second) => {
-      const firstPreferred = preferredSources.has(first.source) ? 1 : 0;
-      const secondPreferred = preferredSources.has(second.source) ? 1 : 0;
-      return secondPreferred - firstPreferred;
-    });
-}
-
-function saveHiddenSources() {
-  localStorage.setItem("hiddenSources", JSON.stringify([...hiddenSources]));
-}
-
-function savePreferredSources() {
-  localStorage.setItem("preferredSources", JSON.stringify([...preferredSources]));
-}
-
-function updateSourceControls() {
-  const hidden = hiddenSources.size;
-  const preferred = preferredSources.size;
-  sourceControls.hidden = hidden === 0 && preferred === 0;
-  hiddenCount.textContent = `${hidden} hidden · ${preferred} preferred`;
+  return articles.filter(Boolean);
 }
 
 function humanizeTopic(topic) {
@@ -416,6 +391,8 @@ function updateActiveNavigation() {
 
   if (route.type === "today") {
     activeKey = "today";
+  } else if (route.type === "home") {
+    activeKey = "today";
   } else if (route.type === "about") {
     activeKey = "about";
   } else if (route.type === "topic") {
@@ -456,8 +433,6 @@ function createSkeletonCard() {
   card.className = "news-card skeleton-card";
   card.setAttribute("aria-hidden", "true");
   card.innerHTML = `
-    <span class="skeleton-block skeleton-image"></span>
-    <span class="skeleton-block skeleton-logo"></span>
     <span class="skeleton-line short"></span>
     <span class="skeleton-line title"></span>
     <span class="skeleton-line"></span>
@@ -505,7 +480,7 @@ function renderBriefingSkeleton() {
     <span class="skeleton-line medium"></span>
   `;
   briefingList.innerHTML = "";
-  for (let index = 0; index < 6; index += 1) {
+  for (let index = 0; index < fastBriefingLimit; index += 1) {
     const item = document.createElement("li");
     item.className = "skeleton-list-item";
     item.innerHTML = `<span class="skeleton-line"></span><span class="skeleton-line short"></span>`;
@@ -514,7 +489,7 @@ function renderBriefingSkeleton() {
 
   marketStatus.textContent = "Loading live data...";
   marketStrip.innerHTML = "";
-  for (let index = 0; index < 6; index += 1) {
+  for (let index = 0; index < featuredMarketKeys.size; index += 1) {
     const market = document.createElement("article");
     market.className = "market-card skeleton-market";
     market.innerHTML = `<span class="skeleton-line short"></span><span class="skeleton-line medium"></span>`;
@@ -683,7 +658,6 @@ function renderTodayBriefing(data) {
   }
 
   renderArticleGrid(todayGrid, displayedArticles.slice(1));
-  updateSourceControls();
 }
 
 function renderMarkets(markets) {
@@ -770,7 +744,7 @@ function refreshCurrentNews() {
     return;
   }
 
-  loadBriefing();
+  loadTodayBriefing({ isHome: true });
 }
 
 function startAutoRefresh() {
@@ -968,12 +942,11 @@ async function loadStoryPage() {
 }
 
 function rerenderCurrentView() {
-  updateSourceControls();
   const route = getRoute();
 
   if (latestBriefing && route.type === "today") {
     renderTodayBriefing(latestBriefing);
-  } else if (latestBriefing && route.type !== "topic") {
+  } else if (latestBriefing && route.type !== "topic" && route.type !== "home") {
     renderFastBriefing(latestBriefing.fastBriefing);
     renderSections(latestBriefing.sections);
   }
@@ -1011,7 +984,6 @@ async function loadBriefing() {
     renderSections(data.sections);
     setStatus(`Briefing updated ${formatDate(data.generatedAt)}`);
     setLastUpdated(data.generatedAt);
-    updateSourceControls();
     setPageMeta(`${siteName} Briefing`, defaultDescription, {
       path: "/",
     });
@@ -1058,7 +1030,6 @@ async function loadSearch(topic = "") {
     setStatus(`${getVisibleArticles(data.articles).length} stories loaded`);
     setLastUpdated();
     renderArticleGrid(searchResults, getVisibleArticles(data.articles).slice(0, 8));
-    updateSourceControls();
   } catch (error) {
     feedTitle.textContent = currentTopic || "Search briefing";
     setStatus(error.message, true);
@@ -1066,25 +1037,25 @@ async function loadSearch(topic = "") {
   }
 }
 
-async function loadTodayBriefing() {
+async function loadTodayBriefing({ isHome = false } = {}) {
   showView("today");
   currentTopic = "";
   latestSearchArticles = [];
   updateTopicExperience("");
   updateActiveNavigation();
   setPageMeta(
-    `Today's Briefing | ${siteName}`,
+    isHome ? `${siteName} Briefing` : `Today's Briefing | ${siteName}`,
     "A concise SignalLedger briefing of today's business, technology, markets, and world headlines.",
     {
-      path: "/briefing/today",
+      path: isHome ? "/" : "/briefing/today",
     },
   );
   setStructuredData({
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `Today's Briefing | ${siteName}`,
+    name: isHome ? `${siteName} Briefing` : `Today's Briefing | ${siteName}`,
     description: "A concise SignalLedger briefing of today's business, technology, markets, and world headlines.",
-    url: getAbsoluteUrl("/briefing/today"),
+    url: getAbsoluteUrl(isHome ? "/" : "/briefing/today"),
   });
   todaySummary.textContent = "Loading the latest briefing...";
   renderSkeletonGrid(todayGrid, 6);
@@ -1215,6 +1186,16 @@ async function loadOps() {
   }
 }
 
+async function loadProductReadiness() {
+  try {
+    const response = await fetch(`/api/health?v=${apiVersion}`);
+    const data = await response.json();
+    newsletterPanel.hidden = !response.ok || data.newsletter?.provider === "local-prototype";
+  } catch {
+    newsletterPanel.hidden = true;
+  }
+}
+
 async function loadRoute() {
   const route = getRoute();
 
@@ -1245,7 +1226,7 @@ async function loadRoute() {
   }
 
   topicInput.value = "";
-  await loadBriefing();
+  await loadTodayBriefing({ isHome: true });
 }
 
 searchForm.addEventListener("submit", (event) => {
@@ -1258,19 +1239,11 @@ searchForm.addEventListener("submit", (event) => {
   }
 
   window.history.pushState({}, "", "/");
-  loadBriefing();
+  loadTodayBriefing({ isHome: true });
 });
 
 refreshButton.addEventListener("click", () => {
   refreshCurrentNews();
-});
-
-resetSources.addEventListener("click", () => {
-  hiddenSources = new Set();
-  preferredSources = new Set();
-  saveHiddenSources();
-  savePreferredSources();
-  rerenderCurrentView();
 });
 
 newsletterForm.addEventListener("submit", async (event) => {
@@ -1323,5 +1296,6 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+loadProductReadiness();
 loadRoute();
 startAutoRefresh();

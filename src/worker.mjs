@@ -15,6 +15,24 @@ const sections = [
       { name: "The Guardian Business", url: "https://www.theguardian.com/business/rss" },
       { name: "CNBC", url: "https://www.cnbc.com/id/10001147/device/rss/rss.html" },
     ],
+    relevance: {
+      include: [
+        "business",
+        "company",
+        "companies",
+        "economy",
+        "earnings",
+        "revenue",
+        "profit",
+        "deal",
+        "merger",
+        "ceo",
+        "consumer",
+        "retail",
+        "startup",
+      ],
+      minimumScore: 1,
+    },
   },
   {
     key: "tech",
@@ -24,6 +42,24 @@ const sections = [
       { name: "TechCrunch", url: "https://techcrunch.com/feed/" },
       { name: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/index" },
     ],
+    relevance: {
+      include: [
+        "technology",
+        "tech",
+        "ai",
+        "artificial intelligence",
+        "software",
+        "chip",
+        "semiconductor",
+        "startup",
+        "app",
+        "cybersecurity",
+        "cloud",
+        "spacex",
+        "rocket",
+      ],
+      minimumScore: 1,
+    },
   },
   {
     key: "markets",
@@ -33,6 +69,33 @@ const sections = [
       { name: "CNBC Markets", url: "https://www.cnbc.com/id/100003114/device/rss/rss.html" },
       { name: "The Guardian Business", url: "https://www.theguardian.com/business/rss" },
     ],
+    relevance: {
+      include: [
+        "market",
+        "markets",
+        "stock",
+        "stocks",
+        "shares",
+        "wall street",
+        "investor",
+        "earnings",
+        "inflation",
+        "price",
+        "prices",
+        "fuel prices",
+        "rates",
+        "fed",
+        "bond",
+        "yield",
+        "oil",
+        "gold",
+        "bitcoin",
+        "crypto",
+        "tariff",
+      ],
+      exclude: ["tv", "music", "film", "celebrity", "sports"],
+      minimumScore: 3,
+    },
   },
   {
     key: "world",
@@ -42,6 +105,23 @@ const sections = [
       { name: "BBC World", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
       { name: "The Guardian World", url: "https://www.theguardian.com/world/rss" },
     ],
+    relevance: {
+      include: [
+        "world",
+        "geopolitics",
+        "government",
+        "election",
+        "war",
+        "security",
+        "trade",
+        "china",
+        "russia",
+        "iran",
+        "tariff",
+        "sanction",
+      ],
+      minimumScore: 1,
+    },
   },
   {
     key: "europe",
@@ -51,12 +131,34 @@ const sections = [
       { name: "BBC Europe", url: "https://feeds.bbci.co.uk/news/world/europe/rss.xml" },
       { name: "The Guardian Europe", url: "https://www.theguardian.com/world/europe-news/rss" },
     ],
+    relevance: {
+      include: [
+        "europe",
+        "eu",
+        "eurozone",
+        "brussels",
+        "ukraine",
+        "france",
+        "germany",
+        "italy",
+        "spain",
+        "portugal",
+        "romania",
+        "nato",
+      ],
+      minimumScore: 1,
+    },
   },
   {
     key: "romania",
     label: "Romania",
     query: "Romania business economy technology politics",
     feeds: [{ name: "Romania Insider", url: "https://www.romania-insider.com/feed" }],
+    relevance: {
+      include: ["romania", "romanian", "bucharest", "cluj", "iasi", "brasov", "bvb", "cee"],
+      minimumScore: 1,
+      trustedFeedOnly: true,
+    },
   },
 ];
 
@@ -66,6 +168,52 @@ const briefingFeeds = [
   ...sections.find((section) => section.key === "markets").feeds,
   ...sections.find((section) => section.key === "world").feeds,
 ];
+
+const topBriefingRelevance = {
+  include: [
+    "business",
+    "company",
+    "companies",
+    "economy",
+    "market",
+    "markets",
+    "stock",
+    "stocks",
+    "technology",
+    "tech",
+    "ai",
+    "artificial intelligence",
+    "geopolitics",
+    "trade",
+    "tariff",
+    "inflation",
+    "rates",
+    "oil",
+    "energy",
+    "startup",
+    "earnings",
+    "ceo",
+  ],
+  exclude: [
+    "celebrity",
+    "entertainment",
+    "fashion",
+    "film",
+    "football",
+    "movie",
+    "music",
+    "recipe",
+    "song",
+    "sport",
+    "sports",
+    "tennis",
+    "theatre",
+    "travel",
+    "tv",
+  ],
+  minimumScore: 1,
+  minimumFallbackResults: 5,
+};
 
 const marketSymbols = [
   { key: "spx", label: "S&P 500", symbols: ["^spx", "%5Espx"] },
@@ -201,16 +349,20 @@ async function cachedJson(request, ctx, cacheSeconds, producer) {
 }
 
 function stripHtml(value = "") {
-  return value
-    .replace(/<!\[CDATA\[|\]\]>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return decodeEntities(
+    value
+      .replace(/<!\[CDATA\[|\]\]>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
 }
 
 function decodeEntities(value = "") {
   return value
+    .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([a-f0-9]+);/gi, (_match, code) => String.fromCodePoint(parseInt(code, 16)))
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
@@ -411,8 +563,87 @@ function scoreArticle(article) {
   return sourceBoost + recencyScore + providerBoost;
 }
 
-function rankArticle(article) {
-  return scoreArticle(article) + Math.min(6, Math.max(0, (article.clusterCount || 1) - 1)) * 6;
+function getSearchRelevance(topic = "") {
+  const normalized = topic.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const terms = normalized
+    .replace(/\bor\b/g, " ")
+    .split(/\s+/)
+    .filter((term) => term.length > 2 && !titleStopwords.has(term));
+
+  if (normalized.includes("artificial intelligence")) {
+    terms.push("ai");
+  }
+
+  return {
+    include: [...new Set([normalized, ...terms])],
+    minimumScore: 1,
+  };
+}
+
+function escapeRegExp(value = "") {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function matchesRelevanceTerm(text, term) {
+  const normalizedTerm = term.trim().toLowerCase();
+  if (!normalizedTerm) {
+    return false;
+  }
+
+  const pattern = normalizedTerm
+    .split(/\s+/)
+    .map((part) => escapeRegExp(part))
+    .join("\\s+");
+  return new RegExp(`(^|[^a-z0-9])${pattern}([^a-z0-9]|$)`, "i").test(text);
+}
+
+function getRelevanceScore(article, relevance) {
+  if (!relevance) {
+    return 0;
+  }
+
+  const title = cleanTitle(article.title || "").toLowerCase();
+  const description = stripHtml(article.description || "").toLowerCase();
+  let score = 0;
+
+  for (const term of relevance.include || []) {
+    if (matchesRelevanceTerm(title, term)) {
+      score += 3;
+    } else if (matchesRelevanceTerm(description, term)) {
+      score += 1;
+    }
+  }
+
+  for (const term of relevance.exclude || []) {
+    if (matchesRelevanceTerm(title, term) || matchesRelevanceTerm(description, term)) {
+      score -= 3;
+    }
+  }
+
+  if (relevance.trustedFeedOnly && article.provider === "rss-direct") {
+    score += 1;
+  }
+
+  return score;
+}
+
+function rankArticle(article, relevance) {
+  const relevanceBoost = Math.max(-3, getRelevanceScore(article, relevance)) * 12;
+  return scoreArticle(article) + Math.min(6, Math.max(0, (article.clusterCount || 1) - 1)) * 6 + relevanceBoost;
+}
+
+function hasEnoughRelevantArticles(articles, relevance, limit) {
+  if (!relevance) {
+    return true;
+  }
+
+  const minimumScore = relevance.minimumScore ?? 1;
+  const minimumCount = Math.min(limit, relevance.minimumResults || 3);
+  return articles.filter((article) => getRelevanceScore(article, relevance) >= minimumScore).length >= minimumCount;
 }
 
 function buildWatchPointText(article) {
@@ -463,8 +694,7 @@ function getWhyItMatters(article, fallbackTopic) {
 }
 
 function buildBriefSummary(article, fallbackTopic) {
-  const angle = getStoryAngle(article, fallbackTopic);
-  return `${article.source || "The source"} frames this as a ${angle} story. ${getWhyItMatters(article, fallbackTopic)}`;
+  return getWhyItMatters(article, fallbackTopic);
 }
 
 function buildSourceContext(article) {
@@ -478,11 +708,9 @@ function buildSourceContext(article) {
 }
 
 function buildKeyPoints(article, fallbackTopic) {
-  const description = stripHtml(article.description || "");
-  const firstPoint = description.length > 170 ? `${description.slice(0, 167)}...` : description;
+  const angle = getStoryAngle(article, fallbackTopic);
   return [
-    firstPoint || `What happened: ${cleanTitle(article.title || "This story is developing")}.`,
-    `Why it matters: ${getWhyItMatters(article, fallbackTopic)}`,
+    `Why it matters: This is a ${angle} story for business readers.`,
     `What to watch: ${buildWatchPointText(article)}`,
   ];
 }
@@ -502,7 +730,7 @@ function buildArticle(item, topic, sourceFallback, provider) {
   const rawDescription = item.description || item["content:encoded"] || item.summary || "";
   const clusterSources =
     provider === "google-news" ? extractClusterSources(rawDescription, source) : [source].filter(Boolean);
-  const title = cleanTitle(item.title || "Untitled article");
+  const title = cleanTitle(decodeEntities(item.title || "Untitled article"));
   const storyId = hashString(`${link}|${source}|${title}`);
 
   const article = {
@@ -645,10 +873,10 @@ async function fetchGoogleNewsArticles(topic, limit = 12) {
   }
 }
 
-function dedupeArticles(articles, limit) {
+function dedupeArticles(articles, limit, relevance = null) {
   const groups = [];
 
-  for (const article of articles.filter(Boolean).sort((first, second) => scoreArticle(second) - scoreArticle(first))) {
+  for (const article of articles.filter(Boolean).sort((first, second) => rankArticle(second, relevance) - rankArticle(first, relevance))) {
     const group = groups.find((candidate) => areArticlesSimilar(article, candidate.representative));
 
     if (!group) {
@@ -666,7 +894,7 @@ function dedupeArticles(articles, limit) {
     }
   }
 
-  return groups
+  const rankedArticles = groups
     .map((group) =>
       withStoryMeta(
         {
@@ -678,22 +906,38 @@ function dedupeArticles(articles, limit) {
         group.representative.storyStored,
       ),
     )
-    .sort((first, second) => rankArticle(second) - rankArticle(first))
-    .slice(0, limit);
+    .sort((first, second) => rankArticle(second, relevance) - rankArticle(first, relevance));
+
+  if (!relevance || relevance.strict === false) {
+    return rankedArticles.slice(0, limit);
+  }
+
+  const minimumScore = relevance.minimumScore ?? 1;
+  const relevantArticles = rankedArticles.filter((article) => getRelevanceScore(article, relevance) >= minimumScore);
+
+  if (relevantArticles.length > 0) {
+    return relevantArticles.slice(0, limit);
+  }
+
+  return rankedArticles.slice(0, Math.min(limit, relevance.minimumFallbackResults || 3));
 }
 
-async function fetchArticles(topic, limit = 12, feeds = []) {
+async function fetchArticles(topic, limit = 12, feeds = [], options = {}) {
+  const relevance = Object.prototype.hasOwnProperty.call(options, "relevance") ? options.relevance : getSearchRelevance(topic);
   const directResults = await Promise.allSettled(feeds.map((feed) => fetchFeedArticles(feed, topic, limit)));
   const directArticles = directResults
     .filter((result) => result.status === "fulfilled")
     .flatMap((result) => result.value);
 
   if (directArticles.length >= limit) {
-    return dedupeArticles(directArticles, limit);
+    const directRanked = dedupeArticles(directArticles, limit, relevance);
+    if (hasEnoughRelevantArticles(directRanked, relevance, limit)) {
+      return directRanked;
+    }
   }
 
   const googleArticles = await fetchGoogleNewsArticles(topic, Math.max(limit, limit * 2));
-  return dedupeArticles([...directArticles, ...googleArticles], limit);
+  return dedupeArticles([...directArticles, ...googleArticles], limit, relevance);
 }
 
 async function persistStories(env, stories) {
@@ -742,9 +986,14 @@ async function hydrateStoryStorage(env, briefing) {
 
 async function buildBriefing(env) {
   const [topStories, markets, ...sectionFeeds] = await Promise.all([
-    fetchArticles("business technology markets geopolitics", 10, briefingFeeds),
+    fetchArticles("business technology markets geopolitics", 10, briefingFeeds, {
+      relevance: {
+        ...topBriefingRelevance,
+        strict: false,
+      },
+    }),
     fetchMarkets(),
-    ...sections.map((section) => fetchArticles(section.query, 8, section.feeds)),
+    ...sections.map((section) => fetchArticles(section.query, 8, section.feeds, { relevance: section.relevance })),
   ]);
 
   const seen = new Set(topStories.map(getEventKey));
@@ -993,12 +1242,16 @@ async function loadStoredStory(env, storyId) {
   return stored ? JSON.parse(stored) : null;
 }
 
-function findSectionFeeds(topic = "") {
+function findSection(topic = "") {
   const normalized = topic.trim().toLowerCase();
   return sections.find((section) => {
     const label = section.label.toLowerCase();
     return normalized === section.key || normalized === label || normalized.includes(section.key);
-  })?.feeds;
+  });
+}
+
+function findSectionFeeds(topic = "") {
+  return findSection(topic)?.feeds;
 }
 
 function getActiveNewsletterProvider(env) {
@@ -1103,10 +1356,11 @@ async function handleApi(request, env, ctx) {
 
     if (url.pathname === "/api/news") {
       const topic = url.searchParams.get("topic")?.trim() || "";
-      const feeds = findSectionFeeds(topic) || [];
+      const section = findSection(topic);
+      const feeds = section?.feeds || [];
 
       return cachedJson(request, ctx, 600, async () => {
-        const articles = await persistStories(env, await fetchArticles(topic, 12, feeds));
+        const articles = await persistStories(env, await fetchArticles(topic, 12, feeds, { relevance: section?.relevance }));
 
         return {
           topic: topic || "Top stories",
