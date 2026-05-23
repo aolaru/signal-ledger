@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="SignalLedger is a focused business, technology, markets, and world news briefing built on direct publisher feeds with fallback aggregation."
+      content="SignalLedger is a focused business, technology, markets, and world briefing with original notes built from public RSS signals."
     />
-    <meta name="robots" content="index,follow" />
+    <meta id="robots-meta" name="robots" content="index,follow" />
     <meta property="og:site_name" content="SignalLedger" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="SignalLedger Briefing" />
     <meta
       property="og:description"
-      content="SignalLedger is a focused business, technology, markets, and world news briefing built on direct publisher feeds with fallback aggregation."
+      content="SignalLedger is a focused business, technology, markets, and world briefing with original notes built from public RSS signals."
     />
     <meta property="og:url" content="https://getsignalledger.com/" />
     <meta property="og:image" content="https://getsignalledger.com/social-card.svg" />
@@ -21,7 +21,7 @@
     <meta name="twitter:title" content="SignalLedger Briefing" />
     <meta
       name="twitter:description"
-      content="SignalLedger is a focused business, technology, markets, and world news briefing built on direct publisher feeds with fallback aggregation."
+      content="SignalLedger is a focused business, technology, markets, and world briefing with original notes built from public RSS signals."
     />
     <meta name="twitter:image" content="https://getsignalledger.com/social-card.svg" />
     <link id="canonical-link" rel="canonical" href="https://getsignalledger.com/" />
@@ -40,7 +40,7 @@
         "@type": "WebSite",
         "name": "SignalLedger",
         "url": "https://getsignalledger.com/",
-        "description": "SignalLedger is a focused business, technology, markets, and world news briefing built on direct publisher feeds with fallback aggregation."
+        "description": "SignalLedger is a focused business, technology, markets, and world briefing with original notes built from public RSS signals."
       }
     </script>
   </head>
@@ -171,13 +171,13 @@
         <article id="story-view" class="route-view story-view" hidden>
           <a class="back-link" href="/">Back to briefing</a>
           <div class="story-page-grid">
-            <figure class="story-page-visual">
-              <img id="story-image" alt="" />
-            </figure>
             <div class="story-page-body">
               <p id="story-kicker" class="story-label"></p>
               <h1 id="story-title"></h1>
               <p id="story-meta" class="story-meta"></p>
+              <figure class="story-page-visual">
+                <img id="story-image" alt="" />
+              </figure>
               <section class="story-brief">
                 <p class="section-label">SignalLedger brief</p>
                 <p id="story-summary"></p>
@@ -222,8 +222,8 @@
               <p class="section-label">Source layer</p>
               <h2>Direct publisher feeds first</h2>
               <p>
-                SignalLedger now pulls from direct publisher RSS feeds first, keeps source attribution visible, and uses
-                Google News only as fallback discovery when direct coverage is thin.
+                SignalLedger uses public RSS feeds as discovery signals, keeps source attribution visible, and sends
+                readers to the original publisher for the full reporting.
               </p>
             </article>
             <article class="method-card">
@@ -301,6 +301,7 @@
 
     <template id="card-template">
       <article class="news-card">
+        <img class="card-thumbnail" alt="" loading="lazy" />
         <div class="card-topline">
           <p class="card-source"></p>
           <time class="card-date"></time>

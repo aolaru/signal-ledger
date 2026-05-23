@@ -19,6 +19,7 @@ const topicPanel = document.getElementById("topic-panel");
 const topicTitle = document.getElementById("topic-title");
 const topicDescription = document.getElementById("topic-description");
 const metaDescription = document.querySelector("meta[name='description']");
+const robotsMeta = document.getElementById("robots-meta");
 const canonicalLink = document.getElementById("canonical-link");
 const structuredDataScript = document.getElementById("structured-data");
 const ogTitle = document.querySelector("meta[property='og:title']");
@@ -55,7 +56,7 @@ let currentTopic = "";
 let latestBriefing = null;
 let latestSearchArticles = [];
 const savedEmail = localStorage.getItem("newsletterEmail");
-const apiVersion = "2026-05-23-simplified-v1";
+const apiVersion = "2026-05-24-varied-thumbnails-v1";
 const siteUrl = "https://getsignalledger.com";
 const siteName = "SignalLedger";
 const newsRefreshMs = 10 * 60 * 1000;
@@ -68,7 +69,7 @@ let lastNewsRefreshAt = 0;
 let marketRefreshTimer;
 let newsRefreshTimer;
 const defaultDescription =
-  "A focused business, technology, markets, and world news briefing powered by direct publisher feeds with fallback aggregation.";
+  "A focused business, technology, markets, and world briefing with original SignalLedger notes built from public RSS signals.";
 
 if (savedEmail) {
   newsletterEmail.value = savedEmail;
@@ -113,6 +114,10 @@ function setPageMeta(title, description = defaultDescription, options = {}) {
 
   document.title = title;
   metaDescription.content = description;
+
+  if (robotsMeta) {
+    robotsMeta.content = options.robots || "index,follow";
+  }
 
   if (canonicalLink) {
     canonicalLink.href = absoluteUrl;
@@ -305,6 +310,7 @@ function getStoryPayload(article) {
     whyItMatters: article.whyItMatters,
     link: article.link,
     imageUrl: article.imageUrl,
+    thumbnailUrl: article.thumbnailUrl,
     visualUrl: article.visualUrl,
     clusterCount: article.clusterCount,
     clusterSources: article.clusterSources,
@@ -514,6 +520,12 @@ function createCard(article) {
   const card = fragment.querySelector(".news-card");
 
   card.dataset.source = article.source;
+  const thumbnail = fragment.querySelector(".card-thumbnail");
+  thumbnail.src = article.thumbnailUrl || article.visualUrl || article.imageUrl || "/favicon.svg";
+  thumbnail.onerror = () => {
+    thumbnail.onerror = null;
+    thumbnail.src = article.visualUrl || article.imageUrl || "/favicon.svg";
+  };
   fragment.querySelector(".card-source").textContent = article.source;
   fragment.querySelector(".card-title").textContent = article.title;
   fragment.querySelector(".card-description").textContent =
@@ -817,7 +829,7 @@ function renderStoryPage(article) {
   const published = formatDate(article.publishedAt);
   const canonicalPath = article.storyId ? getStoredStoryPath(article) : window.location.pathname + window.location.search;
 
-  storyImage.src = article.visualUrl || article.imageUrl || "/favicon.svg";
+  storyImage.src = article.visualUrl || article.thumbnailUrl || article.imageUrl || "/favicon.svg";
   storyImage.alt = "";
   storyKicker.textContent = article.label || getStoryLabel(article);
   storyTitle.textContent = title;
@@ -838,16 +850,15 @@ function renderStoryPage(article) {
   storyOriginalLink.textContent = `Read original article on ${source}`;
   setPageMeta(`${title} | ${siteName}`, buildStorySummary(article), {
     path: canonicalPath,
+    robots: "noindex,follow",
   });
   setStructuredData({
     "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    headline: title,
+    "@type": "WebPage",
+    name: title,
     description: buildStorySummary(article),
-    datePublished: article.publishedAt || undefined,
-    mainEntityOfPage: getAbsoluteUrl(canonicalPath),
     url: getAbsoluteUrl(canonicalPath),
-    publisher: {
+    isPartOf: {
       "@type": "Organization",
       name: siteName,
       url: siteUrl,
@@ -878,6 +889,7 @@ function renderMissingStory(title, summary, why, watch) {
   storyOriginalLink.hidden = true;
   setPageMeta(`Story unavailable | ${siteName}`, defaultDescription, {
     path: window.location.pathname + window.location.search,
+    robots: "noindex,follow",
   });
   setStructuredData({
     "@context": "https://schema.org",

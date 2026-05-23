@@ -9,6 +9,7 @@ const rss = `<?xml version="1.0" encoding="UTF-8"?>
       <title>AI chip stocks rally as earnings beat expectations - Reuters</title>
       <link>https://news.google.com/rss/articles/one</link>
       <pubDate>Sat, 09 May 2026 10:00:00 GMT</pubDate>
+      <enclosure url="https://cdn.example.test/ai-chip-stocks.jpg" type="image/jpeg" />
       <description>&lt;a&gt;AI chip stocks rally as earnings beat expectations&lt;/a&gt;&amp;nbsp;&amp;nbsp;&lt;font&gt;Reuters&lt;/font&gt;&lt;a&gt;Markets digest AI earnings&lt;/a&gt;&amp;nbsp;&amp;nbsp;&lt;font&gt;CNBC&lt;/font&gt;</description>
       <source url="https://www.reuters.com">Reuters</source>
     </item>
@@ -125,6 +126,13 @@ describe("Worker API", () => {
     assert.equal(typeof body.lead.storyStored, "boolean");
     assert.ok(body.lead.clusterCount >= 1);
     assert.ok(body.lead.clusterSources.includes("Reuters"));
+    assert.equal(body.lead.originalImageUrl, undefined);
+    assert.equal(body.lead.feedSnippet, undefined);
+    assert.ok(body.lead.thumbnailUrl.startsWith("data:image/svg+xml"));
+    assert.ok(!body.lead.description.includes("Markets digest AI earnings"));
+    assert.ok(
+      new Set([body.lead, ...body.fastBriefing].filter(Boolean).map((story) => story.thumbnailUrl)).size > 1,
+    );
   });
 
   it("returns topic search results from /api/news", async () => {

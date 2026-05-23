@@ -24,9 +24,9 @@ function ensureWorkerCache() {
 
   globalThis.caches = {
     default: {
-      match: async (request) => localCache.get(request.url),
+      match: async (request) => localCache.get(request.url)?.clone(),
       put: async (request, response) => {
-        localCache.set(request.url, response);
+        localCache.set(request.url, response.clone());
       },
     },
   };

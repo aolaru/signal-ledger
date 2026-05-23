@@ -458,13 +458,20 @@ function getVisualPreset(topic, title = "") {
   );
 }
 
+function getSourceInitials(source = "") {
+  return (
+    source
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("") || "SL"
+  );
+}
+
 function getSourceBadgeUrl(source = "") {
   const normalized = source.trim() || "SL";
-  const initials = normalized
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("") || "SL";
+  const initials = getSourceInitials(normalized);
   const hash = hashString(normalized);
   const hue = parseInt(hash.slice(0, 3), 36) % 360;
   const background = `hsl(${hue} 45% 92%)`;
@@ -480,6 +487,45 @@ function getVisualUrl(topic, title = "") {
   const sectionLabel = escapeXml(preset.label);
   const [background, panel, ink] = preset.colors;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540"><rect width="900" height="540" fill="${background}"/><rect x="44" y="44" width="812" height="452" rx="30" fill="${panel}"/><path d="M76 392C170 330 240 362 338 268s176-120 280-76 142 32 206-24" fill="none" stroke="${preset.accent}" stroke-width="12" stroke-linecap="round"/><path d="M104 420L180 342 250 374 336 278 418 306 506 218 612 248 724 176" fill="none" stroke="${ink}" stroke-opacity="0.45" stroke-width="8" stroke-linecap="round"/><g fill="${ink}" fill-opacity="0.12"><rect x="112" y="244" width="54" height="176" rx="8"/><rect x="188" y="288" width="54" height="132" rx="8"/><rect x="264" y="226" width="54" height="194" rx="8"/><rect x="340" y="316" width="54" height="104" rx="8"/><rect x="416" y="266" width="54" height="154" rx="8"/></g><text x="88" y="122" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="${ink}" fill-opacity="0.72">${sectionLabel}</text><text x="88" y="188" font-family="Georgia, serif" font-size="48" font-weight="700" fill="${ink}">${titleLabel}</text></svg>`;
+  return svgToDataUrl(svg);
+}
+
+function getThumbnailMotif(variant, preset, ink, seed) {
+  const offset = seed % 28;
+
+  if (variant === 0) {
+    return `<circle cx="${238 - offset}" cy="78" r="38" fill="${preset.accent}" fill-opacity="0.18"/><path d="M52 228C88 188 120 206 154 162s72-58 112-34" fill="none" stroke="${preset.accent}" stroke-width="12" stroke-linecap="round"/><path d="M58 246L96 204 130 218 164 170 204 188 256 132" fill="none" stroke="${ink}" stroke-opacity="0.48" stroke-width="7" stroke-linecap="round"/><g fill="${ink}" fill-opacity="0.11"><rect x="62" y="184" width="24" height="64" rx="6"/><rect x="98" y="204" width="24" height="44" rx="6"/><rect x="134" y="166" width="24" height="82" rx="6"/></g>`;
+  }
+
+  if (variant === 1) {
+    return `<circle cx="108" cy="206" r="${68 + offset / 2}" fill="none" stroke="${preset.accent}" stroke-width="12" stroke-opacity="0.34"/><circle cx="108" cy="206" r="${34 + offset / 3}" fill="${preset.accent}" fill-opacity="0.16"/><circle cx="228" cy="96" r="44" fill="${ink}" fill-opacity="0.1"/><path d="M72 88h164M72 116h96M72 144h130" stroke="${ink}" stroke-width="9" stroke-linecap="round" stroke-opacity="0.24"/>`;
+  }
+
+  if (variant === 2) {
+    return `<path d="M22 248L298 86V298H22Z" fill="${preset.accent}" fill-opacity="0.18"/><path d="M54 236L134 160L178 186L264 98" fill="none" stroke="${ink}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.5"/><path d="M246 98h20v20" fill="none" stroke="${ink}" stroke-width="10" stroke-linecap="round" stroke-opacity="0.5"/><rect x="58" y="70" width="86" height="12" rx="6" fill="${preset.accent}" fill-opacity="0.45"/><rect x="58" y="94" width="132" height="12" rx="6" fill="${ink}" fill-opacity="0.14"/>`;
+  }
+
+  if (variant === 3) {
+    return `<g transform="translate(54 76)" fill="${preset.accent}" fill-opacity="0.2"><rect width="54" height="54" rx="12"/><rect x="66" width="54" height="54" rx="12" fill="${ink}" fill-opacity="0.16"/><rect x="132" width="54" height="54" rx="12"/><rect y="66" width="54" height="54" rx="12" fill="${ink}" fill-opacity="0.12"/><rect x="66" y="66" width="54" height="54" rx="12"/><rect x="132" y="66" width="54" height="54" rx="12" fill="${ink}" fill-opacity="0.2"/></g><path d="M58 238h198" stroke="${ink}" stroke-width="9" stroke-linecap="round" stroke-opacity="0.22"/><path d="M58 260h126" stroke="${preset.accent}" stroke-width="9" stroke-linecap="round" stroke-opacity="0.42"/>`;
+  }
+
+  if (variant === 4) {
+    return `<path d="M72 224V104h58v48h70V88h48" fill="none" stroke="${ink}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.38"/><g fill="${preset.accent}" fill-opacity="0.58"><circle cx="72" cy="224" r="14"/><circle cx="130" cy="104" r="14"/><circle cx="200" cy="152" r="14"/><circle cx="248" cy="88" r="14"/></g><circle cx="114" cy="196" r="62" fill="${preset.accent}" fill-opacity="0.1"/><rect x="176" y="210" width="70" height="42" rx="12" fill="${ink}" fill-opacity="0.1"/>`;
+  }
+
+  return `<g fill="${ink}" fill-opacity="0.12"><rect x="58" y="${132 - offset / 3}" width="34" height="${118 + offset}" rx="8"/><rect x="106" y="${96 + offset / 4}" width="34" height="${154 - offset}" rx="8"/><rect x="154" y="${120 - offset / 5}" width="34" height="${130 + offset / 2}" rx="8"/><rect x="202" y="${82 + offset / 2}" width="34" height="${168 - offset / 2}" rx="8"/></g><path d="M52 250h216" stroke="${ink}" stroke-width="8" stroke-linecap="round" stroke-opacity="0.2"/><circle cx="236" cy="76" r="42" fill="${preset.accent}" fill-opacity="0.2"/><path d="M66 82h104" stroke="${preset.accent}" stroke-width="10" stroke-linecap="round" stroke-opacity="0.42"/>`;
+}
+
+function getThumbnailFallbackUrl(topic, title = "", source = "") {
+  const preset = getVisualPreset(topic, title);
+  const [background, panel, ink] = preset.colors;
+  const sectionLabel = escapeXml(preset.label);
+  const initials = escapeXml(getSourceInitials(source || preset.label));
+  const hash = hashString(`${topic}|${title}|${source}`);
+  const variant = parseInt(hash.slice(0, 2), 36) % 6;
+  const seed = parseInt(hash.slice(2, 6), 36) || 0;
+  const motif = getThumbnailMotif(variant, preset, ink, seed);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320"><rect width="320" height="320" fill="${background}"/><rect x="22" y="22" width="276" height="276" rx="26" fill="${panel}"/><rect x="22" y="22" width="276" height="276" rx="26" fill="none" stroke="${ink}" stroke-opacity="0.08" stroke-width="2"/>${motif}<text x="42" y="64" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${ink}" fill-opacity="0.72">${sectionLabel}</text><text x="160" y="174" text-anchor="middle" font-family="Arial, sans-serif" font-size="54" font-weight="800" fill="${ink}" fill-opacity="0.76">${initials}</text></svg>`;
   return svgToDataUrl(svg);
 }
 
@@ -607,7 +653,7 @@ function getRelevanceScore(article, relevance) {
   }
 
   const title = cleanTitle(article.title || "").toLowerCase();
-  const description = stripHtml(article.description || "").toLowerCase();
+  const description = stripHtml(article.feedSnippet || article.description || "").toLowerCase();
   let score = 0;
 
   for (const term of relevance.include || []) {
@@ -647,7 +693,7 @@ function hasEnoughRelevantArticles(articles, relevance, limit) {
 }
 
 function buildWatchPointText(article) {
-  const text = `${article.title || ""} ${article.description || ""}`.toLowerCase();
+  const text = `${article.title || ""} ${article.feedSnippet || article.description || ""}`.toLowerCase();
 
   if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/.test(text)) {
     return "Watch whether the story changes pricing, investor positioning, or expectations in the next market session.";
@@ -665,7 +711,7 @@ function buildWatchPointText(article) {
 }
 
 function getStoryAngle(article, fallbackTopic) {
-  const text = `${article.title || ""} ${article.description || ""}`.toLowerCase();
+  const text = `${article.title || ""} ${article.feedSnippet || article.description || ""}`.toLowerCase();
 
   if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/.test(text)) {
     return "market positioning";
@@ -683,14 +729,22 @@ function getStoryAngle(article, fallbackTopic) {
 }
 
 function getWhyItMatters(article, fallbackTopic) {
-  const cleanDescription = stripHtml(article.description || "");
-  const firstSentence = cleanDescription.split(/(?<=[.!?])\s+/)[0];
+  const title = cleanTitle(article.title || "This story");
+  const angle = getStoryAngle(article, fallbackTopic);
 
-  if (firstSentence && firstSentence.length > 45) {
-    return firstSentence.length > 180 ? `${firstSentence.slice(0, 177)}...` : firstSentence;
+  if (angle === "market positioning") {
+    return `${title} matters as a market-positioning signal: it may shift investor expectations, sector pricing, or risk appetite in the next trading cycle.`;
   }
 
-  return `This is moving the ${fallbackTopic.toLowerCase()} conversation and is worth tracking today.`;
+  if (angle === "policy and geopolitical risk") {
+    return `${title} matters because policy and geopolitical decisions can quickly change company exposure, supply chains, and capital flows.`;
+  }
+
+  if (angle === "technology adoption and capital allocation") {
+    return `${title} matters because technology adoption is increasingly tied to regulation, competitive positioning, and capital allocation.`;
+  }
+
+  return `${title} matters because it adds a fresh signal to the ${fallbackTopic.toLowerCase()} agenda for business readers.`;
 }
 
 function buildBriefSummary(article, fallbackTopic) {
@@ -732,6 +786,9 @@ function buildArticle(item, topic, sourceFallback, provider) {
     provider === "google-news" ? extractClusterSources(rawDescription, source) : [source].filter(Boolean);
   const title = cleanTitle(decodeEntities(item.title || "Untitled article"));
   const storyId = hashString(`${link}|${source}|${title}`);
+  const visualUrl = getVisualUrl(topic, title);
+  const thumbnailFallbackUrl = getThumbnailFallbackUrl(topic, title, source);
+  const feedSnippet = stripHtml(rawDescription);
 
   const article = {
     storyId,
@@ -744,17 +801,21 @@ function buildArticle(item, topic, sourceFallback, provider) {
     source,
     sourceUrl,
     imageUrl: getSourceBadgeUrl(source),
-    visualUrl: getVisualUrl(topic, title),
+    thumbnailUrl: thumbnailFallbackUrl,
+    visualUrl,
     clusterSources,
     clusterCount: clusterSources.length,
-    description: stripHtml(rawDescription),
+    description: "",
+    feedSnippet,
     provider,
   };
+  const briefSummary = buildBriefSummary(article, topic || "Top stories");
 
   return {
     ...article,
+    description: briefSummary,
     whyItMatters: getWhyItMatters(article, topic || "Top stories"),
-    briefSummary: buildBriefSummary(article, topic || "Top stories"),
+    briefSummary,
     watchPoint: buildWatchPointText(article),
     sourceContext: buildSourceContext(article),
     keyPoints: buildKeyPoints(article, topic || "Top stories"),
@@ -940,14 +1001,19 @@ async function fetchArticles(topic, limit = 12, feeds = [], options = {}) {
   return dedupeArticles([...directArticles, ...googleArticles], limit, relevance);
 }
 
+function toPublicStory(story) {
+  const { feedSnippet, ...publicStory } = story;
+  return publicStory;
+}
+
 async function persistStories(env, stories) {
   if (!env.STORY_BRIEFS) {
-    return stories.map((story) => withStoryMeta(story, false));
+    return stories.map((story) => withStoryMeta(toPublicStory(story), false));
   }
 
   const storedAt = new Date().toISOString();
   const storedStories = stories.map((story) => ({
-    ...withStoryMeta(story, true),
+    ...withStoryMeta(toPublicStory(story), true),
     storedAt,
   }));
 
