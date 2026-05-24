@@ -1,21 +1,8 @@
 const searchResults = document.getElementById("search-results");
-const sectionsContainer = document.getElementById("sections");
 const statusText = document.getElementById("status");
-const feedTitle = document.getElementById("feed-title");
 const searchForm = document.getElementById("search-form");
 const topicInput = document.getElementById("topic-input");
-const lastUpdated = document.getElementById("last-updated");
-const refreshButton = document.getElementById("refresh-button");
 const cardTemplate = document.getElementById("card-template");
-const leadStory = document.getElementById("lead-story");
-const briefingList = document.getElementById("briefing-list");
-const marketStrip = document.getElementById("market-strip");
-const marketStatus = document.getElementById("market-status");
-const newsletterPanel = document.getElementById("newsletter-panel");
-const newsletterForm = document.getElementById("newsletter-form");
-const newsletterEmail = document.getElementById("newsletter-email");
-const newsletterStatus = document.getElementById("newsletter-status");
-const topicPanel = document.getElementById("topic-panel");
 const topicTitle = document.getElementById("topic-title");
 const topicDescription = document.getElementById("topic-description");
 const metaDescription = document.querySelector("meta[name='description']");
@@ -27,7 +14,7 @@ const ogDescription = document.querySelector("meta[property='og:description']");
 const ogUrl = document.querySelector("meta[property='og:url']");
 const twitterTitle = document.querySelector("meta[name='twitter:title']");
 const twitterDescription = document.querySelector("meta[name='twitter:description']");
-const homeView = document.getElementById("home-view");
+const topicView = document.getElementById("topic-view");
 const todayView = document.getElementById("today-view");
 const storyView = document.getElementById("story-view");
 const aboutView = document.getElementById("about-view");
@@ -46,36 +33,18 @@ const storySourceContext = document.getElementById("story-source-context");
 const storyWhy = document.getElementById("story-why");
 const storyWatch = document.getElementById("story-watch");
 const storyOriginalLink = document.getElementById("story-original-link");
-const newsletterSubmit = document.getElementById("newsletter-submit");
 const opsSummary = document.getElementById("ops-summary");
 const opsReadiness = document.getElementById("ops-readiness");
 const opsFeeds = document.getElementById("ops-feeds");
 const opsMarkets = document.getElementById("ops-markets");
 
 let currentTopic = "";
-let latestBriefing = null;
-let latestSearchArticles = [];
-const savedEmail = localStorage.getItem("newsletterEmail");
-const apiVersion = "2026-05-24-varied-thumbnails-v1";
+
+const apiVersion = "2026-05-24-original-first-v1";
 const siteUrl = "https://getsignalledger.com";
 const siteName = "SignalLedger";
-const newsRefreshMs = 10 * 60 * 1000;
-const marketRefreshMs = 60 * 1000;
-const fastBriefingLimit = 5;
-const homeSectionLimit = 4;
-const homeStoriesPerSection = 2;
-const featuredMarketKeys = new Set(["spx", "nasdaq", "btc"]);
-let lastNewsRefreshAt = 0;
-let marketRefreshTimer;
-let newsRefreshTimer;
 const defaultDescription =
   "A focused business, technology, markets, and world briefing with original SignalLedger notes built from public RSS signals.";
-
-if (savedEmail) {
-  newsletterEmail.value = savedEmail;
-  newsletterStatus.textContent = "Your email is saved for the briefing list.";
-  newsletterStatus.dataset.state = "saved";
-}
 
 function formatDate(value) {
   if (!value) {
@@ -93,11 +62,6 @@ function formatDate(value) {
       }).format(date);
 }
 
-function setLastUpdated(value = new Date()) {
-  lastUpdated.textContent = `Last update: ${formatDate(value)}`;
-  lastNewsRefreshAt = Date.now();
-}
-
 function getAbsoluteUrl(path = "/") {
   return new URL(path, siteUrl).toString();
 }
@@ -113,7 +77,10 @@ function setPageMeta(title, description = defaultDescription, options = {}) {
   const absoluteUrl = getAbsoluteUrl(path);
 
   document.title = title;
-  metaDescription.content = description;
+
+  if (metaDescription) {
+    metaDescription.content = description;
+  }
 
   if (robotsMeta) {
     robotsMeta.content = options.robots || "index,follow";
@@ -144,21 +111,11 @@ function setPageMeta(title, description = defaultDescription, options = {}) {
   }
 }
 
-function formatMarketValue(market) {
-  const options =
-    market.value > 100
-      ? { maximumFractionDigits: 0 }
-      : { minimumFractionDigits: 2, maximumFractionDigits: 4 };
-  const value = new Intl.NumberFormat("en-US", options).format(market.value);
-
-  return `${market.currency || ""}${value}`;
-}
-
-function getVisibleArticles(articles) {
+function getVisibleArticles(articles = []) {
   return articles.filter(Boolean);
 }
 
-function humanizeTopic(topic) {
+function humanizeTopic(topic = "") {
   return topic
     .split(/\s+/)
     .filter(Boolean)
@@ -211,16 +168,11 @@ function getTopicCopy(topic) {
   const descriptions = {
     "artificial intelligence":
       "AI regulation, model launches, chip supply, enterprise adoption, and the companies shaping the market.",
-    markets:
-      "Market-moving headlines across equities, rates, crypto, commodities, and macro policy.",
-    romania:
-      "Romanian business, technology, politics, and regional economy stories in a wider European context.",
-    europe:
-      "European business, policy, markets, and geopolitics with emphasis on decisions that shape the region.",
-    startups:
-      "Funding, product launches, founders, venture capital, and startup market signals worth tracking.",
-    energy:
-      "Oil, gas, power, renewables, policy, and infrastructure stories that affect markets and strategy.",
+    markets: "Market-moving headlines across equities, rates, crypto, commodities, and macro policy.",
+    romania: "Romanian business, technology, politics, and regional economy stories in a wider European context.",
+    europe: "European business, policy, markets, and geopolitics with emphasis on decisions that shape the region.",
+    startups: "Funding, product launches, founders, venture capital, and startup market signals worth tracking.",
+    energy: "Oil, gas, power, renewables, policy, and infrastructure stories that affect markets and strategy.",
   };
 
   return {
@@ -231,49 +183,20 @@ function getTopicCopy(topic) {
   };
 }
 
-function updateTopicExperience(topic = "") {
-  if (!topic) {
-    topicPanel.hidden = true;
-    setPageMeta(`${siteName} Briefing`, defaultDescription, {
-      path: "/",
-    });
-    setStructuredData({
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      name: siteName,
-      url: siteUrl,
-      description: defaultDescription,
-    });
-    return;
-  }
-
+function updateTopicExperience(topic) {
   const copy = getTopicCopy(topic);
-  topicPanel.hidden = false;
   topicTitle.textContent = copy.title;
   topicDescription.textContent = copy.description;
-  setPageMeta(`${copy.title} | ${siteName}`, copy.description, {
-    path: `/topic/${encodeURIComponent(topic.toLowerCase().replace(/\s+/g, "-"))}`,
-  });
+
+  const path = `/topic/${encodeURIComponent(topic.toLowerCase().replace(/\s+/g, "-"))}`;
+  setPageMeta(`${copy.title} | ${siteName}`, copy.description, { path });
   setStructuredData({
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: `${copy.title} | ${siteName}`,
     description: copy.description,
-    url: getAbsoluteUrl(`/topic/${encodeURIComponent(topic.toLowerCase().replace(/\s+/g, "-"))}`),
+    url: getAbsoluteUrl(path),
   });
-}
-
-function getSectionDeck(key) {
-  const decks = {
-    business: "Company moves, deal flow, strategy, and earnings pressure worth tracking.",
-    tech: "AI, platforms, chips, software, and the technology decisions shaping markets.",
-    markets: "Equities, rates, crypto, commodities, and macro stories with price impact.",
-    world: "Geopolitics, power shifts, trade, and security headlines with business consequences.",
-    europe: "Policy, economy, business, and strategic signals from across the region.",
-    romania: "Romanian business and political stories placed in regional context.",
-  };
-
-  return decks[key] || "The latest stories with source context and business relevance.";
 }
 
 function getStoryLabel(article) {
@@ -385,31 +308,20 @@ function buildSourceContext(article) {
   return `${article.source || "The source"} is the primary source surfaced in the current briefing snapshot.`;
 }
 
-function setNewsletterStatus(message, state = "info") {
-  newsletterStatus.textContent = message;
-  newsletterStatus.dataset.state = state;
-}
-
 function updateActiveNavigation() {
   const route = getRoute();
-  const hashKey = window.location.hash.replace("#", "");
   let activeKey = "";
 
-  if (route.type === "today") {
-    activeKey = "today";
-  } else if (route.type === "home") {
+  if (route.type === "today" || route.type === "home") {
     activeKey = "today";
   } else if (route.type === "about") {
     activeKey = "about";
   } else if (route.type === "topic") {
     activeKey = route.topic.toLowerCase().replace(/\s+/g, "-");
-  } else if (hashKey) {
-    activeKey = hashKey;
   }
 
   for (const link of navLinks) {
-    const isActive = link.dataset.nav === activeKey;
-    if (isActive) {
+    if (link.dataset.nav === activeKey) {
       link.setAttribute("aria-current", "page");
     } else {
       link.removeAttribute("aria-current");
@@ -418,15 +330,11 @@ function updateActiveNavigation() {
 }
 
 function showView(viewName) {
-  homeView.hidden = viewName !== "home";
+  topicView.hidden = viewName !== "topic";
   todayView.hidden = viewName !== "today";
   storyView.hidden = viewName !== "story";
   aboutView.hidden = viewName !== "about";
   opsView.hidden = viewName !== "ops";
-}
-
-function setHomeMode(mode = "briefing") {
-  homeView.dataset.mode = mode;
 }
 
 function setStatus(message, isError = false) {
@@ -478,62 +386,36 @@ function renderErrorPanel(container, message, retry) {
   container.appendChild(panel);
 }
 
-function renderBriefingSkeleton() {
-  leadStory.innerHTML = `
-    <span class="skeleton-line short"></span>
-    <span class="skeleton-line title"></span>
-    <span class="skeleton-line title"></span>
-    <span class="skeleton-line medium"></span>
-  `;
-  briefingList.innerHTML = "";
-  for (let index = 0; index < fastBriefingLimit; index += 1) {
-    const item = document.createElement("li");
-    item.className = "skeleton-list-item";
-    item.innerHTML = `<span class="skeleton-line"></span><span class="skeleton-line short"></span>`;
-    briefingList.appendChild(item);
-  }
-
-  marketStatus.textContent = "Loading live data...";
-  marketStrip.innerHTML = "";
-  for (let index = 0; index < featuredMarketKeys.size; index += 1) {
-    const market = document.createElement("article");
-    market.className = "market-card skeleton-market";
-    market.innerHTML = `<span class="skeleton-line short"></span><span class="skeleton-line medium"></span>`;
-    marketStrip.appendChild(market);
-  }
-
-  sectionsContainer.innerHTML = "";
-  renderSkeletonGrid(searchResults, 0);
-  const block = document.createElement("section");
-  block.className = "section-block";
-  const heading = document.createElement("h2");
-  heading.textContent = "Loading stories";
-  const grid = document.createElement("div");
-  grid.className = "news-grid";
-  renderSkeletonGrid(grid, 3);
-  block.append(heading, grid);
-  sectionsContainer.appendChild(block);
-}
-
 function createCard(article) {
   const fragment = cardTemplate.content.cloneNode(true);
-  const card = fragment.querySelector(".news-card");
-
-  card.dataset.source = article.source;
   const thumbnail = fragment.querySelector(".card-thumbnail");
+  const originalLink = fragment.querySelector(".card-link");
+  const briefLink = fragment.querySelector(".brief-link");
+
+  fragment.querySelector(".news-card").dataset.source = article.source || "";
   thumbnail.src = article.thumbnailUrl || article.visualUrl || article.imageUrl || "/favicon.svg";
   thumbnail.onerror = () => {
     thumbnail.onerror = null;
     thumbnail.src = article.visualUrl || article.imageUrl || "/favicon.svg";
   };
-  fragment.querySelector(".card-source").textContent = article.source;
-  fragment.querySelector(".card-title").textContent = article.title;
+  fragment.querySelector(".card-source").textContent = article.source || "Source";
+  fragment.querySelector(".card-title").textContent = cleanTitle(article.title || "Untitled story");
   fragment.querySelector(".card-description").textContent =
     article.briefSummary || article.whyItMatters || article.description || "This story is developing.";
   fragment.querySelector(".card-date").textContent = formatDate(article.publishedAt);
 
-  const link = fragment.querySelector(".card-link");
-  link.href = getStoryUrl(article);
+  if (article.link) {
+    originalLink.href = article.link;
+    originalLink.target = "_blank";
+    originalLink.rel = "noreferrer";
+    originalLink.textContent = "Read original";
+    briefLink.href = getStoryUrl(article);
+    briefLink.textContent = "Signal note";
+  } else {
+    originalLink.href = getStoryUrl(article);
+    originalLink.textContent = "Open signal note";
+    briefLink.hidden = true;
+  }
 
   return fragment;
 }
@@ -546,109 +428,14 @@ function renderArticleGrid(container, articles) {
   }
 }
 
-function renderLead(article) {
-  if (!article) {
-    leadStory.innerHTML = "<p>No lead story is available right now.</p>";
-    return;
-  }
-
-  leadStory.innerHTML = "";
-
-  const visual = document.createElement("img");
-  visual.className = "lead-visual";
-  visual.src = article.visualUrl || article.imageUrl || "/favicon.svg";
-  visual.alt = "";
-
-  const content = document.createElement("div");
-  content.className = "lead-content";
-
-  const source = document.createElement("span");
-  source.className = "lead-source";
-
-  const logo = document.createElement("img");
-  logo.src = article.imageUrl || "/favicon.svg";
-  logo.alt = "";
-  source.append(logo, article.source, " ");
-
-  const time = document.createElement("span");
-  time.textContent = formatDate(article.publishedAt);
-  source.appendChild(time);
-
-  const title = document.createElement("h2");
-  title.textContent = article.title;
-
-  const summary = document.createElement("p");
-  summary.textContent = article.briefSummary || article.whyItMatters || article.description || "This story is developing.";
-
-  const link = document.createElement("a");
-  link.className = "lead-link";
-  link.href = getStoryUrl(article);
-  link.textContent = "Read the brief";
-
-  content.append(source, title, summary, link);
-  leadStory.append(visual, content);
-
-  const panel = document.querySelector(".lead-panel");
-  if (panel) {
-    panel.style.backgroundImage = "";
-  }
-}
-
-function renderFastBriefing(articles) {
-  briefingList.innerHTML = "";
-
-  for (const article of getVisibleArticles(articles).slice(0, fastBriefingLimit)) {
-    const item = document.createElement("li");
-    const link = document.createElement("a");
-    link.href = getStoryUrl(article);
-    link.textContent = article.title;
-
-    const meta = document.createElement("span");
-    meta.textContent = `${article.source} · ${formatDate(article.publishedAt)}`;
-
-    item.append(link, meta);
-    briefingList.appendChild(item);
-  }
-}
-
-function renderSections(sections, options = {}) {
-  sectionsContainer.innerHTML = "";
-  const sectionLimit = options.sectionLimit || homeSectionLimit;
-  const storiesPerSection = options.storiesPerSection || homeStoriesPerSection;
-
-  for (const section of sections.slice(0, sectionLimit)) {
-    const block = document.createElement("section");
-    block.className = "section-block";
-    block.id = section.key;
-
-    const header = document.createElement("div");
-    header.className = "section-header";
-
-    const heading = document.createElement("h2");
-    heading.textContent = section.label;
-
-    const deck = document.createElement("p");
-    deck.textContent = getSectionDeck(section.key);
-
-    const grid = document.createElement("div");
-    grid.className = "news-grid";
-    renderArticleGrid(grid, getVisibleArticles(section.articles).slice(0, storiesPerSection));
-
-    header.append(heading, deck);
-    block.append(header, grid);
-    sectionsContainer.appendChild(block);
-  }
-}
-
 function collectBriefingArticles(data) {
   const seen = new Set();
-  const articles = [data.lead, ...data.fastBriefing, ...data.sections.flatMap((section) => section.articles)].filter(
-    Boolean,
-  );
+  const sectionArticles = (data.sections || []).flatMap((section) => section.articles || []);
+  const articles = [data.lead, ...(data.fastBriefing || []), ...sectionArticles].filter(Boolean);
 
   return articles.filter((article) => {
     const key = article.link || article.title;
-    if (seen.has(key)) {
+    if (!key || seen.has(key)) {
       return false;
     }
 
@@ -670,101 +457,6 @@ function renderTodayBriefing(data) {
   }
 
   renderArticleGrid(todayGrid, displayedArticles.slice(1));
-}
-
-function renderMarkets(markets) {
-  marketStrip.innerHTML = "";
-
-  if (!markets?.length) {
-    marketStatus.textContent = "Market data unavailable";
-    return;
-  }
-
-  const featuredMarkets = markets.filter((market) => featuredMarketKeys.has(market.key)).slice(0, 3);
-  const displayedMarkets = featuredMarkets.length ? featuredMarkets : markets.slice(0, 3);
-  const latestUpdate = markets
-    .map((market) => new Date(market.updatedAt))
-    .filter((date) => !Number.isNaN(date.getTime()))
-    .sort((first, second) => second - first)[0];
-
-  const hasFallback = markets.some((market) => market.isFallback);
-  marketStatus.textContent = hasFallback
-    ? "Delayed market snapshot"
-    : latestUpdate
-      ? `Updated ${formatDate(latestUpdate)}`
-      : "Live data";
-
-  for (const market of displayedMarkets) {
-    const card = document.createElement("article");
-    const direction = market.percentChange >= 0 ? "up" : "down";
-    card.className = `market-card ${direction}`;
-
-    const label = document.createElement("span");
-    label.textContent = market.label;
-
-    const value = document.createElement("strong");
-    value.textContent = formatMarketValue(market);
-
-    const change = document.createElement("em");
-    change.textContent = `${market.percentChange >= 0 ? "+" : ""}${market.percentChange.toFixed(2)}%`;
-    if (market.isFallback) {
-      change.title = "Fallback snapshot shown because live provider data is unavailable.";
-    }
-
-    card.append(label, value, change);
-    marketStrip.appendChild(card);
-  }
-}
-
-async function loadMarkets() {
-  if (document.hidden) {
-    return;
-  }
-
-  try {
-    const cacheKey = Math.floor(Date.now() / marketRefreshMs);
-    const response = await fetch(`/api/markets?v=${apiVersion}&t=${cacheKey}`);
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.details || data.error || "Unknown error");
-    }
-
-    renderMarkets(data.markets);
-  } catch (error) {
-    marketStatus.textContent = error.message;
-  }
-}
-
-function refreshCurrentNews() {
-  if (document.hidden) {
-    return;
-  }
-
-  const route = getRoute();
-  if (route.type === "about" || route.type === "story" || route.type === "ops") {
-    return;
-  }
-
-  if (route.type === "today") {
-    loadTodayBriefing();
-    return;
-  }
-
-  if (currentTopic) {
-    loadSearch(currentTopic);
-    return;
-  }
-
-  loadTodayBriefing({ isHome: true });
-}
-
-function startAutoRefresh() {
-  window.clearInterval(marketRefreshTimer);
-  window.clearInterval(newsRefreshTimer);
-
-  marketRefreshTimer = window.setInterval(loadMarkets, marketRefreshMs);
-  newsRefreshTimer = window.setInterval(refreshCurrentNews, newsRefreshMs);
 }
 
 function getTopicFromPath() {
@@ -828,27 +520,31 @@ function renderStoryPage(article) {
   const source = article.source || "Original source";
   const published = formatDate(article.publishedAt);
   const canonicalPath = article.storyId ? getStoredStoryPath(article) : window.location.pathname + window.location.search;
+  const summary = buildStorySummary(article);
 
   storyImage.src = article.visualUrl || article.thumbnailUrl || article.imageUrl || "/favicon.svg";
   storyImage.alt = "";
   storyKicker.textContent = article.label || getStoryLabel(article);
   storyTitle.textContent = title;
   storyMeta.textContent = `${source}${published ? ` · ${published}` : ""}`;
-  storySummary.textContent = buildStorySummary(article);
+  storySummary.textContent = summary;
   storySourceContext.textContent = buildSourceContext(article);
   storyWhy.textContent = article.whyItMatters || article.description || "This story is developing.";
   storyWatch.textContent = buildWatchPoint(article);
   storyKeyPoints.innerHTML = "";
+
   for (const point of article.keyPoints || []) {
     const item = document.createElement("li");
     item.textContent = point;
     storyKeyPoints.appendChild(item);
   }
+
   storyKeyPoints.hidden = storyKeyPoints.children.length === 0;
   storyOriginalLink.href = article.link || "#";
   storyOriginalLink.hidden = !article.link;
   storyOriginalLink.textContent = `Read original article on ${source}`;
-  setPageMeta(`${title} | ${siteName}`, buildStorySummary(article), {
+
+  setPageMeta(`${title} | ${siteName}`, summary, {
     path: canonicalPath,
     robots: "noindex,follow",
   });
@@ -856,7 +552,7 @@ function renderStoryPage(article) {
     "@context": "https://schema.org",
     "@type": "WebPage",
     name: title,
-    description: buildStorySummary(article),
+    description: summary,
     url: getAbsoluteUrl(canonicalPath),
     isPartOf: {
       "@type": "Organization",
@@ -904,8 +600,6 @@ async function loadStoryPage() {
 
   showView("story");
   currentTopic = "";
-  latestSearchArticles = [];
-  updateTopicExperience("");
   updateActiveNavigation();
 
   if (!storyId && !encoded) {
@@ -953,83 +647,21 @@ async function loadStoryPage() {
   }
 }
 
-function rerenderCurrentView() {
-  const route = getRoute();
-
-  if (latestBriefing && route.type === "today") {
-    renderTodayBriefing(latestBriefing);
-  } else if (latestBriefing && route.type !== "topic" && route.type !== "home") {
-    renderFastBriefing(latestBriefing.fastBriefing);
-    renderSections(latestBriefing.sections);
-  }
-
-  if (latestSearchArticles.length) {
-    const visibleSearchArticles = getVisibleArticles(latestSearchArticles);
-    statusText.textContent = `${visibleSearchArticles.length} stories loaded`;
-    renderArticleGrid(searchResults, visibleSearchArticles.slice(0, 8));
-  }
-}
-
-async function loadBriefing() {
-  showView("home");
-  setHomeMode("briefing");
-  updateActiveNavigation();
-  setStatus("Loading briefing...");
-  searchResults.innerHTML = "";
-  latestSearchArticles = [];
-  currentTopic = "";
-  updateTopicExperience("");
-  renderBriefingSkeleton();
-
-  try {
-    const response = await fetch(`/api/briefing?v=${apiVersion}`);
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.details || data.error || "Unknown error");
-    }
-
-    latestBriefing = data;
-    renderLead(data.lead);
-    renderFastBriefing(data.fastBriefing);
-    renderMarkets(data.markets);
-    renderSections(data.sections);
-    setStatus(`Briefing updated ${formatDate(data.generatedAt)}`);
-    setLastUpdated(data.generatedAt);
-    setPageMeta(`${siteName} Briefing`, defaultDescription, {
-      path: "/",
-    });
-    setStructuredData({
-      "@context": "https://schema.org",
-      "@type": "CollectionPage",
-      name: `${siteName} Briefing`,
-      description: defaultDescription,
-      url: getAbsoluteUrl("/"),
-    });
-  } catch (error) {
-    setStatus(error.message, true);
-    renderErrorPanel(sectionsContainer, error.message, loadBriefing);
-  }
-}
-
 async function loadSearch(topic = "") {
-  showView("home");
+  showView("topic");
   currentTopic = topic.trim();
-  setHomeMode(currentTopic ? "topic" : "briefing");
+  topicInput.value = currentTopic;
   updateTopicExperience(currentTopic);
   updateActiveNavigation();
   setStatus("Searching...");
-  renderSkeletonGrid(searchResults, 3);
-  sectionsContainer.innerHTML = "";
+  renderSkeletonGrid(searchResults, 6);
 
-  const params = new URLSearchParams();
-  if (currentTopic) {
-    params.set("topic", currentTopic);
-  }
+  const params = new URLSearchParams({
+    topic: currentTopic,
+    v: apiVersion,
+  });
 
   try {
-    params.set("v", apiVersion);
-
     const response = await fetch(`/api/news?${params.toString()}`);
     const data = await response.json();
 
@@ -1037,13 +669,11 @@ async function loadSearch(topic = "") {
       throw new Error(data.details || data.error || "Unknown error");
     }
 
-    latestSearchArticles = data.articles;
-    feedTitle.textContent = currentTopic ? `Latest on ${humanizeTopic(currentTopic)}` : "Search briefing";
-    setStatus(`${getVisibleArticles(data.articles).length} stories loaded`);
-    setLastUpdated();
-    renderArticleGrid(searchResults, getVisibleArticles(data.articles).slice(0, 8));
+    const latestSearchArticles = data.articles || [];
+    const visibleArticles = getVisibleArticles(latestSearchArticles);
+    setStatus(`${visibleArticles.length} stories loaded`);
+    renderArticleGrid(searchResults, visibleArticles.slice(0, 12));
   } catch (error) {
-    feedTitle.textContent = currentTopic || "Search briefing";
     setStatus(error.message, true);
     renderErrorPanel(searchResults, error.message, () => loadSearch(currentTopic));
   }
@@ -1052,8 +682,6 @@ async function loadSearch(topic = "") {
 async function loadTodayBriefing({ isHome = false } = {}) {
   showView("today");
   currentTopic = "";
-  latestSearchArticles = [];
-  updateTopicExperience("");
   updateActiveNavigation();
   setPageMeta(
     isHome ? `${siteName} Briefing` : `Today's Briefing | ${siteName}`,
@@ -1081,20 +709,16 @@ async function loadTodayBriefing({ isHome = false } = {}) {
       throw new Error(data.details || data.error || "Unknown error");
     }
 
-    latestBriefing = data;
     renderTodayBriefing(data);
-    setLastUpdated(data.generatedAt);
   } catch (error) {
     todaySummary.textContent = error.message;
-    renderErrorPanel(todayGrid, error.message, loadTodayBriefing);
+    renderErrorPanel(todayGrid, error.message, () => loadTodayBriefing({ isHome }));
   }
 }
 
 function loadAbout() {
   showView("about");
   currentTopic = "";
-  latestSearchArticles = [];
-  updateTopicExperience("");
   updateActiveNavigation();
   setPageMeta(
     `About ${siteName}`,
@@ -1154,17 +778,15 @@ function renderOpsList(container, items, emptyMessage) {
 async function loadOps() {
   showView("ops");
   currentTopic = "";
-  latestSearchArticles = [];
-  updateTopicExperience("");
   updateActiveNavigation();
-  setPageMeta(`Operations | ${siteName}`, "Operational diagnostics for SignalLedger feeds, storage, and newsletter delivery.", {
+  setPageMeta(`Operations | ${siteName}`, "Operational diagnostics for SignalLedger feeds, story storage, and market data.", {
     path: "/ops",
   });
   setStructuredData({
     "@context": "https://schema.org",
     "@type": "WebPage",
     name: `Operations | ${siteName}`,
-    description: "Operational diagnostics for SignalLedger feeds, storage, and newsletter delivery.",
+    description: "Operational diagnostics for SignalLedger feeds, story storage, and market data.",
     url: getAbsoluteUrl("/ops"),
   });
 
@@ -1198,16 +820,6 @@ async function loadOps() {
   }
 }
 
-async function loadProductReadiness() {
-  try {
-    const response = await fetch(`/api/health?v=${apiVersion}`);
-    const data = await response.json();
-    newsletterPanel.hidden = !response.ok || data.newsletter?.provider === "local-prototype";
-  } catch {
-    newsletterPanel.hidden = true;
-  }
-}
-
 async function loadRoute() {
   const route = getRoute();
 
@@ -1232,7 +844,6 @@ async function loadRoute() {
   }
 
   if (route.type === "topic") {
-    topicInput.value = route.topic;
     await loadSearch(route.topic);
     return;
   }
@@ -1244,6 +855,7 @@ async function loadRoute() {
 searchForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const topic = topicInput.value.trim();
+
   if (topic) {
     window.history.pushState({}, "", `/topic/${encodeURIComponent(topic.toLowerCase().replace(/\s+/g, "-"))}`);
     loadRoute();
@@ -1254,60 +866,7 @@ searchForm.addEventListener("submit", (event) => {
   loadTodayBriefing({ isHome: true });
 });
 
-refreshButton.addEventListener("click", () => {
-  refreshCurrentNews();
-});
-
-newsletterForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const email = newsletterEmail.value.trim();
-  newsletterSubmit.disabled = true;
-  newsletterForm.setAttribute("aria-busy", "true");
-  setNewsletterStatus("Joining...", "pending");
-
-  try {
-    const response = await fetch("/api/subscribe", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email }),
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Could not join right now.");
-    }
-
-    localStorage.setItem("newsletterEmail", email);
-    setNewsletterStatus(
-      data.provider && data.provider !== "local-prototype"
-        ? `${data.message || "You are on the briefing list."} Check your inbox if confirmation is required.`
-        : data.message || "You are on the briefing list.",
-      data.provider && data.provider !== "local-prototype" ? "success" : "saved",
-    );
-  } catch (error) {
-    setNewsletterStatus(error.message, "error");
-  } finally {
-    newsletterSubmit.disabled = false;
-    newsletterForm.removeAttribute("aria-busy");
-  }
-});
-
 window.addEventListener("popstate", loadRoute);
 window.addEventListener("hashchange", updateActiveNavigation);
 
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    return;
-  }
-
-  loadMarkets();
-  if (Date.now() - lastNewsRefreshAt > newsRefreshMs) {
-    refreshCurrentNews();
-  }
-});
-
-loadProductReadiness();
 loadRoute();
-startAutoRefresh();

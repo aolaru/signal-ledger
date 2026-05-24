@@ -289,8 +289,8 @@ const trustedSourceBoosts = new Map([
 ]);
 
 const storyStorageTtlSeconds = 60 * 60 * 24 * 30;
-const requestTimeoutMs = 8000;
-const requestRetryCount = 2;
+const requestTimeoutMs = 5000;
+const requestRetryCount = 1;
 const feedDiagnostics = new Map();
 const marketDiagnostics = new Map();
 const titleStopwords = new Set([
@@ -997,8 +997,12 @@ async function fetchArticles(topic, limit = 12, feeds = [], options = {}) {
     }
   }
 
-  const googleArticles = await fetchGoogleNewsArticles(topic, Math.max(limit, limit * 2));
-  return dedupeArticles([...directArticles, ...googleArticles], limit, relevance);
+  try {
+    const googleArticles = await fetchGoogleNewsArticles(topic, Math.max(limit, limit * 2));
+    return dedupeArticles([...directArticles, ...googleArticles], limit, relevance);
+  } catch {
+    return dedupeArticles(directArticles, limit, relevance);
+  }
 }
 
 function toPublicStory(story) {
@@ -1041,7 +1045,7 @@ async function hydrateStoryStorage(env, briefing) {
 
   return {
     ...briefing,
-    lead: storyMap.get(briefing.lead.storyId),
+    lead: briefing.lead ? storyMap.get(briefing.lead.storyId) || briefing.lead : null,
     fastBriefing: briefing.fastBriefing.map((story) => storyMap.get(story.storyId) || story),
     sections: briefing.sections.map((section) => ({
       ...section,
@@ -1051,14 +1055,13 @@ async function hydrateStoryStorage(env, briefing) {
 }
 
 async function buildBriefing(env) {
-  const [topStories, markets, ...sectionFeeds] = await Promise.all([
+  const [topStories, ...sectionFeeds] = await Promise.all([
     fetchArticles("business technology markets geopolitics", 10, briefingFeeds, {
       relevance: {
         ...topBriefingRelevance,
         strict: false,
       },
     }),
-    fetchMarkets(),
     ...sections.map((section) => fetchArticles(section.query, 8, section.feeds, { relevance: section.relevance })),
   ]);
 
@@ -1085,7 +1088,7 @@ async function buildBriefing(env) {
     generatedAt: new Date().toISOString(),
     lead: topStories[0],
     fastBriefing: topStories.slice(1, 9),
-    markets,
+    markets: getFallbackMarketSnapshot(),
     sections: sectionData,
   });
 }
@@ -1122,34 +1125,38 @@ function parseMarketCsv(csv, market) {
 }
 
 async function fetchMarket(market) {
-  const errors = [];
   const startedAt = Date.now();
+  const attempts = await Promise.allSettled(
+    market.symbols.map(async (symbol) => {
+      const symbolParam = symbol.startsWith("%") ? symbol : encodeURIComponent(symbol);
+      const url = `https://stooq.com/q/l/?s=${symbolParam}&f=sd2t2ohlcvn&h&e=csv`;
 
-  for (const symbol of market.symbols) {
-    const symbolParam = symbol.startsWith("%") ? symbol : encodeURIComponent(symbol);
-    const url = `https://stooq.com/q/l/?s=${symbolParam}&f=sd2t2ohlcvn&h&e=csv`;
-
-    try {
       const csv = await fetchText(url, {
         "Accept": "text/csv,*/*",
         "User-Agent": "Mozilla/5.0 SignalLedger/1.0",
       });
-      const parsed = parseMarketCsv(csv, market);
-      recordDiagnostic(marketDiagnostics, market.key, {
-        name: market.label,
+      return {
         symbol,
-        provider: "stooq",
-        status: "ok",
-        latencyMs: Date.now() - startedAt,
-        lastSuccessAt: new Date().toISOString(),
-        lastError: "",
-      });
-      return parsed;
-    } catch (error) {
-      errors.push(`${symbol}: ${error.message}`);
-    }
+        parsed: parseMarketCsv(csv, market),
+      };
+    }),
+  );
+
+  const success = attempts.find((result) => result.status === "fulfilled");
+  if (success) {
+    recordDiagnostic(marketDiagnostics, market.key, {
+      name: market.label,
+      symbol: success.value.symbol,
+      provider: "stooq",
+      status: "ok",
+      latencyMs: Date.now() - startedAt,
+      lastSuccessAt: new Date().toISOString(),
+      lastError: "",
+    });
+    return success.value.parsed;
   }
 
+  const errors = attempts.map((result, index) => `${market.symbols[index]}: ${result.reason.message}`);
   recordDiagnostic(marketDiagnostics, market.key, {
     name: market.label,
     provider: "stooq",
@@ -1161,33 +1168,36 @@ async function fetchMarket(market) {
 }
 
 async function fetchMarkets() {
-  const markets = [];
+  const results = await Promise.allSettled(marketSymbols.map((market) => fetchMarket(market)));
+  const markets = results
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value);
 
-  for (const market of marketSymbols) {
-    try {
-      markets.push(await fetchMarket(market));
-    } catch (error) {
-      console.warn(`Skipping ${market.label}: ${error.message}`);
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.warn(`Skipping ${marketSymbols[index].label}: ${result.reason.message}`);
     }
-  }
+  });
 
   if (markets.length === marketSymbols.length) {
     return markets;
   }
 
   const liveKeys = new Set(markets.map((market) => market.key));
-  const fallbackUpdatedAt = new Date().toISOString();
   return [
     ...markets,
-    ...fallbackMarkets
-      .filter((market) => !liveKeys.has(market.key))
-      .map((market) => ({
-        ...market,
-        updatedAt: fallbackUpdatedAt,
-        isFallback: true,
-        provider: "fallback-snapshot",
-      })),
+    ...getFallbackMarketSnapshot().filter((market) => !liveKeys.has(market.key)),
   ];
+}
+
+function getFallbackMarketSnapshot() {
+  const fallbackUpdatedAt = new Date().toISOString();
+  return fallbackMarkets.map((market) => ({
+    ...market,
+    updatedAt: fallbackUpdatedAt,
+    isFallback: true,
+    provider: "fallback-snapshot",
+  }));
 }
 
 async function subscribeWithButtondown(env, email, request) {

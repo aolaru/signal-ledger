@@ -61,56 +61,17 @@
       </header>
 
       <main>
-        <section id="home-view" class="route-view" data-mode="briefing">
-          <section class="briefing-hero">
-            <div class="lead-panel">
-              <div class="lead-heading">
-                <p class="eyebrow">Lead signal</p>
-                <h1>What matters now</h1>
-                <p>One high-signal story from the latest business, market, and world briefing.</p>
-              </div>
-              <div id="lead-story" class="lead-story" aria-live="polite"></div>
-            </div>
-
-            <aside class="side-rail" aria-label="Fast briefing">
-              <div class="rail-header">
-                <p class="section-label">Fast briefing</p>
-                <button id="refresh-button" class="icon-button" type="button" title="Refresh briefing">
-                  Refresh
-                </button>
-              </div>
-              <ol id="briefing-list" class="briefing-list"></ol>
-            </aside>
-          </section>
-
-          <section class="market-pulse" aria-label="Market snapshot">
-            <div class="pulse-header">
-              <p class="section-label">Market snapshot</p>
-              <span id="market-status">Loading live data...</span>
-            </div>
-            <div id="market-strip" class="market-strip"></div>
-          </section>
-
-          <section class="topic-bar" aria-label="Featured topics">
-            <a href="/topic/artificial-intelligence">AI</a>
-            <a href="/topic/markets">Markets</a>
-            <a href="/topic/romania">Romania</a>
-            <a href="/topic/europe">Europe</a>
-            <a href="/topic/startups">Startups</a>
-            <a href="/topic/energy">Energy</a>
-          </section>
-
-          <section id="topic-panel" class="topic-panel" hidden>
+        <section id="topic-view" class="route-view page-view" hidden>
+          <div class="page-heading topic-heading">
             <p class="section-label">Topic briefing</p>
-            <h2 id="topic-title"></h2>
+            <h1 id="topic-title">Topic briefing</h1>
             <p id="topic-description"></p>
-          </section>
+          </div>
 
           <section class="search-section">
             <div>
-              <p class="section-label">Follow a topic</p>
-              <h2 id="feed-title">Search briefing</h2>
-              <p id="last-updated" class="last-updated">Last update: pending</p>
+              <p class="section-label">Search another topic</p>
+              <h2>Keep it focused</h2>
             </div>
             <form id="search-form" class="search-bar">
               <input
@@ -120,37 +81,21 @@
                 placeholder="AI regulation, startups, Romania, China..."
                 autocomplete="off"
               />
-              <button type="submit">Search</button>
+              <button type="submit">Search topic</button>
             </form>
           </section>
 
-          <p id="status" class="status">Loading briefing...</p>
+          <nav class="topic-chip-list" aria-label="Popular topics">
+            <a href="/topic/artificial-intelligence">AI</a>
+            <a href="/topic/markets">Markets</a>
+            <a href="/topic/romania">Romania</a>
+            <a href="/topic/europe">Europe</a>
+            <a href="/topic/startups">Startups</a>
+            <a href="/topic/energy">Energy</a>
+          </nav>
+
+          <p id="status" class="status">Choose a topic.</p>
           <section id="search-results" class="news-grid" aria-live="polite"></section>
-          <section id="sections" class="sections" aria-live="polite"></section>
-
-          <section id="newsletter-panel" class="newsletter-panel" hidden>
-            <div>
-              <p class="section-label">Morning briefing</p>
-              <h2>Get SignalLedger by email.</h2>
-              <p class="newsletter-copy">
-                A tighter daily scan of markets, business, tech, and geopolitical signal. Original reporting stays with
-                the publisher.
-              </p>
-            </div>
-            <form id="newsletter-form" class="newsletter-form">
-              <input
-                id="newsletter-email"
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                autocomplete="email"
-                required
-              />
-              <button id="newsletter-submit" type="submit">Join</button>
-            </form>
-            <p class="newsletter-help">No spam. No account required.</p>
-            <p id="newsletter-status" class="newsletter-status" aria-live="polite"></p>
-          </section>
         </section>
 
         <section id="today-view" class="route-view page-view" hidden>
@@ -258,7 +203,7 @@
             <p class="section-label">Operations</p>
             <h1>Feed, storage, and launch readiness.</h1>
             <p id="ops-summary">
-              Loading current production-readiness diagnostics for feeds, newsletter delivery, and story storage.
+              Loading current production-readiness diagnostics for feeds, story storage, and market data.
             </p>
           </div>
           <div id="ops-readiness" class="ops-grid"></div>
@@ -309,7 +254,8 @@
         <h3 class="card-title"></h3>
         <p class="card-description"></p>
         <div class="card-actions">
-          <a class="card-link">Read brief</a>
+          <a class="card-link">Read original</a>
+          <a class="brief-link">Signal note</a>
         </div>
       </article>
     </template>
