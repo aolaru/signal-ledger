@@ -288,7 +288,6 @@ const trustedSourceBoosts = new Map([
   ["Romania Insider", 12],
 ]);
 
-const storyStorageTtlSeconds = 60 * 60 * 24 * 30;
 const requestTimeoutMs = 5000;
 const requestRetryCount = 1;
 const feedDiagnostics = new Map();
@@ -370,17 +369,6 @@ function decodeEntities(value = "") {
     .replace(/&gt;/g, ">");
 }
 
-function slugify(value = "") {
-  const slug = value
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 82);
-
-  return slug || "briefing";
-}
-
 function hashString(value = "") {
   let hash = 2166136261;
 
@@ -394,19 +382,6 @@ function hashString(value = "") {
 
 function cleanTitle(title = "") {
   return title.replace(/\s[-|]\s[^-|]+$/, "").trim() || title;
-}
-
-function getStoryPath(story) {
-  return `/story/${encodeURIComponent(story.storyId)}/${story.storySlug || slugify(story.title || story.storyId)}`;
-}
-
-function withStoryMeta(story, storyStored) {
-  return {
-    ...story,
-    storyStored,
-    storySlug: story.storySlug || slugify(story.title || story.storyId),
-    canonicalPath: getStoryPath(story),
-  };
 }
 
 function recordDiagnostic(store, key, payload) {
@@ -792,9 +767,6 @@ function buildArticle(item, topic, sourceFallback, provider) {
 
   const article = {
     storyId,
-    storySlug: slugify(title),
-    storyStored: false,
-    canonicalPath: getStoryPath({ storyId, storySlug: slugify(title), title }),
     title,
     link,
     publishedAt: item.pubDate || item.published || item.updated || "",
@@ -956,17 +928,12 @@ function dedupeArticles(articles, limit, relevance = null) {
   }
 
   const rankedArticles = groups
-    .map((group) =>
-      withStoryMeta(
-        {
-          ...group.representative,
-          clusterSources: [...group.sources],
-          clusterCount: group.sources.size,
-          clusterSize: group.articles.length,
-        },
-        group.representative.storyStored,
-      ),
-    )
+    .map((group) => ({
+      ...group.representative,
+      clusterSources: [...group.sources],
+      clusterCount: group.sources.size,
+      clusterSize: group.articles.length,
+    }))
     .sort((first, second) => rankArticle(second, relevance) - rankArticle(first, relevance));
 
   if (!relevance || relevance.strict === false) {
@@ -1005,53 +972,9 @@ async function fetchArticles(topic, limit = 12, feeds = [], options = {}) {
   }
 }
 
-function toPublicStory(story) {
-  const { feedSnippet, ...publicStory } = story;
-  return publicStory;
-}
-
-async function persistStories(env, stories) {
-  if (!env.STORY_BRIEFS) {
-    return stories.map((story) => withStoryMeta(toPublicStory(story), false));
-  }
-
-  const storedAt = new Date().toISOString();
-  const storedStories = stories.map((story) => ({
-    ...withStoryMeta(toPublicStory(story), true),
-    storedAt,
-  }));
-
-  await Promise.all(
-    storedStories.map((story) =>
-      env.STORY_BRIEFS.put(`story:${story.storyId}`, JSON.stringify(story), {
-        expirationTtl: storyStorageTtlSeconds,
-      }),
-    ),
-  );
-
-  return storedStories;
-}
-
-function collectStories(briefing) {
-  return dedupeArticles(
-    [briefing.lead, ...briefing.fastBriefing, ...briefing.sections.flatMap((section) => section.articles)].filter(Boolean),
-    100,
-  );
-}
-
-async function hydrateStoryStorage(env, briefing) {
-  const storedStories = await persistStories(env, collectStories(briefing));
-  const storyMap = new Map(storedStories.map((story) => [story.storyId, story]));
-
-  return {
-    ...briefing,
-    lead: briefing.lead ? storyMap.get(briefing.lead.storyId) || briefing.lead : null,
-    fastBriefing: briefing.fastBriefing.map((story) => storyMap.get(story.storyId) || story),
-    sections: briefing.sections.map((section) => ({
-      ...section,
-      articles: section.articles.map((story) => storyMap.get(story.storyId) || story),
-    })),
-  };
+function toPublicArticle(article) {
+  const { feedSnippet, ...publicArticle } = article;
+  return publicArticle;
 }
 
 async function buildBriefing(env) {
@@ -1080,17 +1003,17 @@ async function buildBriefing(env) {
     return {
       key: section.key,
       label: section.label,
-      articles,
+      articles: articles.map(toPublicArticle),
     };
   });
 
-  return hydrateStoryStorage(env, {
+  return {
     generatedAt: new Date().toISOString(),
-    lead: topStories[0],
-    fastBriefing: topStories.slice(1, 9),
+    lead: topStories[0] ? toPublicArticle(topStories[0]) : null,
+    fastBriefing: topStories.slice(1, 9).map(toPublicArticle),
     markets: getFallbackMarketSnapshot(),
     sections: sectionData,
-  });
+  };
 }
 
 function parseMarketCsv(csv, market) {
@@ -1305,29 +1228,12 @@ async function storeNewsletterSignup(env, email, request) {
   };
 }
 
-async function loadStoredStory(env, storyId) {
-  if (!storyId) {
-    throw new Error("Missing story id");
-  }
-
-  if (!env.STORY_BRIEFS) {
-    return null;
-  }
-
-  const stored = await env.STORY_BRIEFS.get(`story:${storyId}`);
-  return stored ? JSON.parse(stored) : null;
-}
-
 function findSection(topic = "") {
   const normalized = topic.trim().toLowerCase();
   return sections.find((section) => {
     const label = section.label.toLowerCase();
     return normalized === section.key || normalized === label || normalized.includes(section.key);
   });
-}
-
-function findSectionFeeds(topic = "") {
-  return findSection(topic)?.feeds;
 }
 
 function getActiveNewsletterProvider(env) {
@@ -1367,11 +1273,9 @@ function getConfiguredFeeds() {
 function getReadiness(env) {
   return [
     {
-      name: "Story storage",
-      status: env.STORY_BRIEFS ? "ready" : "action-needed",
-      detail: env.STORY_BRIEFS
-        ? "Cloudflare KV is configured for permanent story pages."
-        : "Configure STORY_BRIEFS KV to move story pages fully off URL-encoded fallback links.",
+      name: "Reader flow",
+      status: "ready",
+      detail: "Briefing cards now keep SignalLedger notes inline and send readers to the original publisher.",
     },
     {
       name: "Newsletter provider",
@@ -1396,11 +1300,6 @@ function getHealthReport(env) {
 
   return {
     generatedAt: new Date().toISOString(),
-    storyStorage: {
-      provider: env.STORY_BRIEFS ? "cloudflare-kv" : "url-fallback",
-      configured: Boolean(env.STORY_BRIEFS),
-      retentionDays: storyStorageTtlSeconds / 86400,
-    },
     newsletter: {
       provider: getActiveNewsletterProvider(env),
       signupStorage: env.NEWSLETTER_SIGNUPS ? "cloudflare-kv" : "none",
@@ -1436,24 +1335,13 @@ async function handleApi(request, env, ctx) {
       const feeds = section?.feeds || [];
 
       return cachedJson(request, ctx, 600, async () => {
-        const articles = await persistStories(env, await fetchArticles(topic, 12, feeds, { relevance: section?.relevance }));
+        const articles = await fetchArticles(topic, 12, feeds, { relevance: section?.relevance });
 
         return {
           topic: topic || "Top stories",
-          articles,
+          articles: articles.map(toPublicArticle),
         };
       });
-    }
-
-    if (url.pathname === "/api/story") {
-      const storyId = url.searchParams.get("id")?.trim() || "";
-      const story = await loadStoredStory(env, storyId);
-
-      if (!story) {
-        return jsonResponse({ error: "Story not found." }, 404);
-      }
-
-      return jsonResponse({ story }, 200, 300);
     }
 
     if (url.pathname === "/api/subscribe" && request.method === "POST") {
@@ -1496,13 +1384,11 @@ export default {
       return handleApi(request, env, ctx);
     }
 
-    if (
-      url.pathname.startsWith("/topic/") ||
-      url.pathname.startsWith("/story/") ||
-      url.pathname === "/about" ||
-      url.pathname === "/ops" ||
-      url.pathname === "/briefing/today"
-    ) {
+    if (url.pathname === "/briefing/today" || url.pathname.startsWith("/story/")) {
+      return Response.redirect(new URL("/", url), 301);
+    }
+
+    if (url.pathname.startsWith("/topic/") || url.pathname === "/about" || url.pathname === "/ops") {
       const indexUrl = new URL("/", url);
       return env.ASSETS.fetch(new Request(indexUrl, request));
     }

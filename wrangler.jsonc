@@ -7,13 +7,11 @@
     "directory": "./public",
     "binding": "ASSETS"
   },
-  // To persist newsletter signups and story briefs, create KV namespaces:
+  // To persist newsletter signups, create a KV namespace:
   // npx wrangler kv namespace create NEWSLETTER_SIGNUPS
-  // npx wrangler kv namespace create STORY_BRIEFS
   // Then add:
   // "kv_namespaces": [
-  //   { "binding": "NEWSLETTER_SIGNUPS", "id": "your-production-kv-id" },
-  //   { "binding": "STORY_BRIEFS", "id": "your-production-kv-id" }
+  //   { "binding": "NEWSLETTER_SIGNUPS", "id": "your-production-kv-id" }
   // ],
   // Optional secrets / vars for a real newsletter provider:
   // npx wrangler secret put BUTTONDOWN_API_KEY

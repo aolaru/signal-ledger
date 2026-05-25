@@ -86,19 +86,6 @@ function installFetchStub() {
   };
 }
 
-function createKvStore() {
-  const store = new Map();
-  return {
-    store,
-    binding: {
-      get: async (key) => store.get(key) ?? null,
-      put: async (key, value) => {
-        store.set(key, value);
-      },
-    },
-  };
-}
-
 async function json(path, options = {}) {
   const response = await worker.fetch(new Request(`https://signal-ledger.test${path}`, options), env, ctx);
   return {
@@ -121,9 +108,6 @@ describe("Worker API", () => {
     assert.equal(body.sections.length, 6);
     assert.equal(body.lead.source, "Reuters");
     assert.ok(body.lead.storyId);
-    assert.ok(body.lead.storySlug);
-    assert.ok(body.lead.canonicalPath.startsWith("/story/"));
-    assert.equal(typeof body.lead.storyStored, "boolean");
     assert.ok(body.lead.clusterCount >= 1);
     assert.ok(body.lead.clusterSources.includes("Reuters"));
     assert.equal(body.lead.originalImageUrl, undefined);
@@ -144,39 +128,12 @@ describe("Worker API", () => {
     assert.ok(body.articles[0].visualUrl);
   });
 
-  it("returns stored story briefs when STORY_BRIEFS is configured", async () => {
-    const stories = createKvStore();
-    const storyEnv = {
-      ...env,
-      STORY_BRIEFS: stories.binding,
-    };
-
-    const briefingResponse = await worker.fetch(new Request("https://signal-ledger.test/api/briefing"), storyEnv, ctx);
-    const briefing = await briefingResponse.json();
-
-    assert.equal(briefingResponse.status, 200);
-    assert.equal(briefing.lead.storyStored, true);
-
-    const storyResponse = await worker.fetch(
-      new Request(`https://signal-ledger.test/api/story?id=${briefing.lead.storyId}`),
-      storyEnv,
-      ctx,
-    );
-    const storyBody = await storyResponse.json();
-
-    assert.equal(storyResponse.status, 200);
-    assert.equal(storyBody.story.storyId, briefing.lead.storyId);
-    assert.equal(storyBody.story.source, "Reuters");
-    assert.ok(storyBody.story.canonicalPath.startsWith("/story/"));
-  });
-
-  it("returns health diagnostics for feeds, newsletter, and story storage", async () => {
+  it("returns health diagnostics for feeds, newsletter, and readiness", async () => {
     const { response, body } = await json("/api/health");
 
     assert.equal(response.status, 200);
-    assert.equal(body.storyStorage.provider, "url-fallback");
     assert.equal(body.newsletter.provider, "local-prototype");
-    assert.equal(body.readiness[0].status, "action-needed");
+    assert.equal(body.readiness[0].status, "ready");
     assert.ok(body.feeds.length >= 1);
   });
 
@@ -241,11 +198,20 @@ describe("Worker API", () => {
   });
 
   it("serves the SPA shell for client-side routes", async () => {
-    for (const path of ["/topic/markets", "/story/sample-brief", "/about", "/ops", "/briefing/today"]) {
+    for (const path of ["/topic/markets", "/about", "/ops"]) {
       const response = await worker.fetch(new Request(`https://signal-ledger.test${path}`), env, ctx);
 
       assert.equal(response.status, 200);
       assert.equal(await response.text(), "asset");
+    }
+  });
+
+  it("redirects retired story and today duplicate routes", async () => {
+    for (const path of ["/story/sample-brief", "/briefing/today"]) {
+      const response = await worker.fetch(new Request(`https://signal-ledger.test${path}`), env, ctx);
+
+      assert.equal(response.status, 301);
+      assert.equal(response.headers.get("location"), "https://signal-ledger.test/");
     }
   });
 });

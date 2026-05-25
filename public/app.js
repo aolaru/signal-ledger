@@ -16,23 +16,12 @@ const twitterTitle = document.querySelector("meta[name='twitter:title']");
 const twitterDescription = document.querySelector("meta[name='twitter:description']");
 const topicView = document.getElementById("topic-view");
 const todayView = document.getElementById("today-view");
-const storyView = document.getElementById("story-view");
 const aboutView = document.getElementById("about-view");
 const opsView = document.getElementById("ops-view");
 const todaySummary = document.getElementById("today-summary");
 const todayLead = document.getElementById("today-lead");
 const todayGrid = document.getElementById("today-grid");
 const navLinks = document.querySelectorAll("[data-nav]");
-const storyImage = document.getElementById("story-image");
-const storyKicker = document.getElementById("story-kicker");
-const storyTitle = document.getElementById("story-title");
-const storyMeta = document.getElementById("story-meta");
-const storySummary = document.getElementById("story-summary");
-const storyKeyPoints = document.getElementById("story-key-points");
-const storySourceContext = document.getElementById("story-source-context");
-const storyWhy = document.getElementById("story-why");
-const storyWatch = document.getElementById("story-watch");
-const storyOriginalLink = document.getElementById("story-original-link");
 const opsSummary = document.getElementById("ops-summary");
 const opsReadiness = document.getElementById("ops-readiness");
 const opsFeeds = document.getElementById("ops-feeds");
@@ -127,41 +116,6 @@ function cleanTitle(title = "") {
   return title.replace(/\s[-|]\s[^-|]+$/, "").trim() || title;
 }
 
-function slugify(value = "") {
-  const slug = cleanTitle(value)
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 82);
-
-  return slug || "briefing";
-}
-
-function base64UrlEncode(value) {
-  const json = JSON.stringify(value);
-  const bytes = new TextEncoder().encode(json);
-  let binary = "";
-
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function base64UrlDecode(value) {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
-  const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return JSON.parse(new TextDecoder().decode(bytes));
-}
-
 function getTopicCopy(topic) {
   const topicName = humanizeTopic(topic);
   const lower = topic.toLowerCase();
@@ -197,69 +151,6 @@ function updateTopicExperience(topic) {
     description: copy.description,
     url: getAbsoluteUrl(path),
   });
-}
-
-function getStoryLabel(article) {
-  const text = `${article.title || ""} ${article.description || ""} ${article.whyItMatters || ""}`.toLowerCase();
-
-  if (article.clusterCount > 1) {
-    return "Top story";
-  }
-
-  if (/(stock|market|earnings|investor|inflation|rates|oil|gold|bitcoin|crypto)/.test(text)) {
-    return "Market signal";
-  }
-
-  if (/(war|tariff|sanction|election|minister|government|regulation|geopolitic)/.test(text)) {
-    return "Developing";
-  }
-
-  if (/(ai|artificial intelligence|chip|software|technology|startup|app)/.test(text)) {
-    return "Tech watch";
-  }
-
-  return "Briefing note";
-}
-
-function getStoryPayload(article) {
-  return {
-    storyId: article.storyId,
-    storySlug: article.storySlug || slugify(article.title),
-    storyStored: Boolean(article.storyStored),
-    title: cleanTitle(article.title),
-    source: article.source,
-    publishedAt: article.publishedAt,
-    description: article.description,
-    whyItMatters: article.whyItMatters,
-    link: article.link,
-    imageUrl: article.imageUrl,
-    thumbnailUrl: article.thumbnailUrl,
-    visualUrl: article.visualUrl,
-    clusterCount: article.clusterCount,
-    clusterSources: article.clusterSources,
-    label: getStoryLabel(article),
-    briefSummary: article.briefSummary,
-    watchPoint: article.watchPoint,
-    sourceContext: article.sourceContext,
-    keyPoints: article.keyPoints,
-    angle: article.angle,
-  };
-}
-
-function getStoredStoryPath(article) {
-  const storyId = article.storyId || article.id;
-  const storySlug = article.storySlug || slugify(article.title || storyId || "briefing");
-  return `/story/${encodeURIComponent(storyId)}/${storySlug}`;
-}
-
-function getStoryUrl(article) {
-  const payload = getStoryPayload(article);
-
-  if (payload.storyStored && payload.storyId) {
-    return getStoredStoryPath(payload);
-  }
-
-  return `/story/${payload.storySlug}?data=${base64UrlEncode(payload)}`;
 }
 
 function buildStorySummary(article) {
@@ -308,6 +199,19 @@ function buildSourceContext(article) {
   return `${article.source || "The source"} is the primary source surfaced in the current briefing snapshot.`;
 }
 
+function getInlineBriefPoints(article) {
+  const keyPoints = (article.keyPoints || []).filter(Boolean);
+  if (keyPoints.length) {
+    return keyPoints.slice(0, 3);
+  }
+
+  return [
+    `Why it matters: ${article.whyItMatters || article.description || "This story is developing."}`,
+    `What to watch: ${buildWatchPoint(article)}`,
+    `Source context: ${buildSourceContext(article)}`,
+  ];
+}
+
 function updateActiveNavigation() {
   const route = getRoute();
   let activeKey = "";
@@ -332,7 +236,6 @@ function updateActiveNavigation() {
 function showView(viewName) {
   topicView.hidden = viewName !== "topic";
   todayView.hidden = viewName !== "today";
-  storyView.hidden = viewName !== "story";
   aboutView.hidden = viewName !== "about";
   opsView.hidden = viewName !== "ops";
 }
@@ -390,7 +293,10 @@ function createCard(article) {
   const fragment = cardTemplate.content.cloneNode(true);
   const thumbnail = fragment.querySelector(".card-thumbnail");
   const originalLink = fragment.querySelector(".card-link");
-  const briefLink = fragment.querySelector(".brief-link");
+  const briefToggle = fragment.querySelector(".brief-toggle");
+  const inlineBrief = fragment.querySelector(".inline-brief");
+  const inlineSummary = fragment.querySelector(".inline-brief-summary");
+  const inlinePoints = fragment.querySelector(".inline-brief-points");
 
   fragment.querySelector(".news-card").dataset.source = article.source || "";
   thumbnail.src = article.thumbnailUrl || article.visualUrl || article.imageUrl || "/favicon.svg";
@@ -403,19 +309,30 @@ function createCard(article) {
   fragment.querySelector(".card-description").textContent =
     article.briefSummary || article.whyItMatters || article.description || "This story is developing.";
   fragment.querySelector(".card-date").textContent = formatDate(article.publishedAt);
+  inlineSummary.textContent = buildStorySummary(article);
+  inlinePoints.innerHTML = "";
+
+  for (const point of getInlineBriefPoints(article)) {
+    const item = document.createElement("li");
+    item.textContent = point;
+    inlinePoints.appendChild(item);
+  }
 
   if (article.link) {
     originalLink.href = article.link;
     originalLink.target = "_blank";
     originalLink.rel = "noreferrer";
     originalLink.textContent = "Read original";
-    briefLink.href = getStoryUrl(article);
-    briefLink.textContent = "Signal note";
   } else {
-    originalLink.href = getStoryUrl(article);
-    originalLink.textContent = "Open signal note";
-    briefLink.hidden = true;
+    originalLink.hidden = true;
   }
+
+  briefToggle.addEventListener("click", () => {
+    const isOpen = !inlineBrief.hidden;
+    inlineBrief.hidden = isOpen;
+    briefToggle.setAttribute("aria-expanded", String(!isOpen));
+    briefToggle.textContent = isOpen ? "Signal note" : "Hide note";
+  });
 
   return fragment;
 }
@@ -477,174 +394,12 @@ function getRoute() {
     return { type: "ops" };
   }
 
-  if (window.location.pathname === "/briefing/today") {
-    return { type: "today" };
-  }
-
-  if (window.location.pathname.startsWith("/story/")) {
-    return { type: "story" };
-  }
-
   const topic = getTopicFromPath();
   if (topic) {
     return { type: "topic", topic };
   }
 
   return { type: "home" };
-}
-
-function getStoryRouteDetails() {
-  const pathMatch = window.location.pathname.match(/^\/story\/([^/]+)(?:\/([^/]+))?$/);
-  const params = new URLSearchParams(window.location.search);
-
-  return {
-    storyId: pathMatch?.[2] ? decodeURIComponent(pathMatch[1]) : params.get("id")?.trim() || "",
-    storySlug: pathMatch?.[2] ? decodeURIComponent(pathMatch[2]) : pathMatch?.[1] ? decodeURIComponent(pathMatch[1]) : "",
-    encoded: params.get("data"),
-  };
-}
-
-async function fetchStoredStory(storyId) {
-  const response = await fetch(`/api/story?id=${encodeURIComponent(storyId)}&v=${apiVersion}`);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.details || data.error || "Story brief unavailable");
-  }
-
-  return data.story;
-}
-
-function renderStoryPage(article) {
-  const title = cleanTitle(article.title);
-  const source = article.source || "Original source";
-  const published = formatDate(article.publishedAt);
-  const canonicalPath = article.storyId ? getStoredStoryPath(article) : window.location.pathname + window.location.search;
-  const summary = buildStorySummary(article);
-
-  storyImage.src = article.visualUrl || article.thumbnailUrl || article.imageUrl || "/favicon.svg";
-  storyImage.alt = "";
-  storyKicker.textContent = article.label || getStoryLabel(article);
-  storyTitle.textContent = title;
-  storyMeta.textContent = `${source}${published ? ` · ${published}` : ""}`;
-  storySummary.textContent = summary;
-  storySourceContext.textContent = buildSourceContext(article);
-  storyWhy.textContent = article.whyItMatters || article.description || "This story is developing.";
-  storyWatch.textContent = buildWatchPoint(article);
-  storyKeyPoints.innerHTML = "";
-
-  for (const point of article.keyPoints || []) {
-    const item = document.createElement("li");
-    item.textContent = point;
-    storyKeyPoints.appendChild(item);
-  }
-
-  storyKeyPoints.hidden = storyKeyPoints.children.length === 0;
-  storyOriginalLink.href = article.link || "#";
-  storyOriginalLink.hidden = !article.link;
-  storyOriginalLink.textContent = `Read original article on ${source}`;
-
-  setPageMeta(`${title} | ${siteName}`, summary, {
-    path: canonicalPath,
-    robots: "noindex,follow",
-  });
-  setStructuredData({
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: title,
-    description: summary,
-    url: getAbsoluteUrl(canonicalPath),
-    isPartOf: {
-      "@type": "Organization",
-      name: siteName,
-      url: siteUrl,
-    },
-    isBasedOn: article.link || undefined,
-    image: article.visualUrl ? [article.visualUrl] : undefined,
-    author: article.source
-      ? {
-          "@type": "Organization",
-          name: article.source,
-        }
-      : undefined,
-  });
-}
-
-function renderMissingStory(title, summary, why, watch) {
-  storyImage.src = "/favicon.svg";
-  storyImage.alt = "";
-  storyKicker.textContent = "Story unavailable";
-  storyTitle.textContent = title;
-  storyMeta.textContent = "";
-  storySummary.textContent = summary;
-  storySourceContext.textContent = "";
-  storyWhy.textContent = why;
-  storyWatch.textContent = watch;
-  storyKeyPoints.innerHTML = "";
-  storyKeyPoints.hidden = true;
-  storyOriginalLink.hidden = true;
-  setPageMeta(`Story unavailable | ${siteName}`, defaultDescription, {
-    path: window.location.pathname + window.location.search,
-    robots: "noindex,follow",
-  });
-  setStructuredData({
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: "Story unavailable",
-    url: getAbsoluteUrl(window.location.pathname + window.location.search),
-  });
-}
-
-async function loadStoryPage() {
-  const { storyId, encoded } = getStoryRouteDetails();
-
-  showView("story");
-  currentTopic = "";
-  updateActiveNavigation();
-
-  if (!storyId && !encoded) {
-    renderMissingStory(
-      "Story brief unavailable",
-      "This story link is missing its briefing data. Return to the homepage and open it again.",
-      "The link does not contain a stored story ID or a fallback article payload.",
-      "Open the article again from the homepage or topic page to regenerate the brief link.",
-    );
-    return;
-  }
-
-  try {
-    let article = null;
-
-    if (storyId) {
-      try {
-        article = await fetchStoredStory(storyId);
-        if (!encoded && window.location.pathname !== getStoredStoryPath(article)) {
-          window.history.replaceState({}, "", getStoredStoryPath(article));
-        }
-      } catch (error) {
-        if (!encoded) {
-          throw error;
-        }
-      }
-    }
-
-    if (!article && encoded) {
-      article = base64UrlDecode(encoded);
-    }
-
-    if (!article) {
-      throw new Error("Story brief unavailable");
-    }
-
-    renderStoryPage(article);
-  } catch (error) {
-    renderMissingStory(
-      "Story brief unavailable",
-      "This story could not be loaded right now. Return to the homepage and open it again.",
-      error.message,
-      "If the stored story is no longer available, the encoded fallback link should still work for newly opened articles.",
-    );
-  }
 }
 
 async function loadSearch(topic = "") {
@@ -679,23 +434,23 @@ async function loadSearch(topic = "") {
   }
 }
 
-async function loadTodayBriefing({ isHome = false } = {}) {
+async function loadTodayBriefing() {
   showView("today");
   currentTopic = "";
   updateActiveNavigation();
   setPageMeta(
-    isHome ? `${siteName} Briefing` : `Today's Briefing | ${siteName}`,
+    `${siteName} Briefing`,
     "A concise SignalLedger briefing of today's business, technology, markets, and world headlines.",
     {
-      path: isHome ? "/" : "/briefing/today",
+      path: "/",
     },
   );
   setStructuredData({
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: isHome ? `${siteName} Briefing` : `Today's Briefing | ${siteName}`,
+    name: `${siteName} Briefing`,
     description: "A concise SignalLedger briefing of today's business, technology, markets, and world headlines.",
-    url: getAbsoluteUrl(isHome ? "/" : "/briefing/today"),
+    url: getAbsoluteUrl("/"),
   });
   todaySummary.textContent = "Loading the latest briefing...";
   renderSkeletonGrid(todayGrid, 6);
@@ -712,7 +467,7 @@ async function loadTodayBriefing({ isHome = false } = {}) {
     renderTodayBriefing(data);
   } catch (error) {
     todaySummary.textContent = error.message;
-    renderErrorPanel(todayGrid, error.message, () => loadTodayBriefing({ isHome }));
+    renderErrorPanel(todayGrid, error.message, loadTodayBriefing);
   }
 }
 
@@ -779,14 +534,14 @@ async function loadOps() {
   showView("ops");
   currentTopic = "";
   updateActiveNavigation();
-  setPageMeta(`Operations | ${siteName}`, "Operational diagnostics for SignalLedger feeds, story storage, and market data.", {
+  setPageMeta(`Operations | ${siteName}`, "Operational diagnostics for SignalLedger feeds, signup storage, and market data.", {
     path: "/ops",
   });
   setStructuredData({
     "@context": "https://schema.org",
     "@type": "WebPage",
     name: `Operations | ${siteName}`,
-    description: "Operational diagnostics for SignalLedger feeds, story storage, and market data.",
+    description: "Operational diagnostics for SignalLedger feeds, signup storage, and market data.",
     url: getAbsoluteUrl("/ops"),
   });
 
@@ -833,23 +588,13 @@ async function loadRoute() {
     return;
   }
 
-  if (route.type === "today") {
-    await loadTodayBriefing();
-    return;
-  }
-
-  if (route.type === "story") {
-    await loadStoryPage();
-    return;
-  }
-
   if (route.type === "topic") {
     await loadSearch(route.topic);
     return;
   }
 
   topicInput.value = "";
-  await loadTodayBriefing({ isHome: true });
+  await loadTodayBriefing();
 }
 
 searchForm.addEventListener("submit", (event) => {
@@ -863,7 +608,7 @@ searchForm.addEventListener("submit", (event) => {
   }
 
   window.history.pushState({}, "", "/");
-  loadTodayBriefing({ isHome: true });
+  loadTodayBriefing();
 });
 
 window.addEventListener("popstate", loadRoute);

@@ -52,7 +52,7 @@
           <span>SignalLedger</span>
         </a>
         <nav class="nav-tabs" aria-label="Briefing sections">
-          <a href="/briefing/today" data-nav="today">Today</a>
+          <a href="/" data-nav="today">Today</a>
           <a href="/topic/artificial-intelligence" data-nav="artificial-intelligence">AI</a>
           <a href="/topic/markets" data-nav="markets">Markets</a>
           <a href="/topic/romania" data-nav="romania">Romania</a>
@@ -113,46 +113,6 @@
           </section>
         </section>
 
-        <article id="story-view" class="route-view story-view" hidden>
-          <a class="back-link" href="/">Back to briefing</a>
-          <div class="story-page-grid">
-            <div class="story-page-body">
-              <p id="story-kicker" class="story-label"></p>
-              <h1 id="story-title"></h1>
-              <p id="story-meta" class="story-meta"></p>
-              <figure class="story-page-visual">
-                <img id="story-image" alt="" />
-              </figure>
-              <section class="story-brief">
-                <p class="section-label">SignalLedger brief</p>
-                <p id="story-summary"></p>
-                <ul id="story-key-points" class="story-key-points"></ul>
-              </section>
-              <section class="story-context" hidden>
-                <p class="section-label">Source context</p>
-                <p id="story-source-context"></p>
-              </section>
-              <section class="story-points" hidden>
-                <div>
-                  <p class="section-label">Why it matters</p>
-                  <p id="story-why"></p>
-                </div>
-                <div>
-                  <p class="section-label">What to watch</p>
-                  <p id="story-watch"></p>
-                </div>
-              </section>
-              <a id="story-original-link" class="original-link" target="_blank" rel="noreferrer">
-                Read original article
-              </a>
-              <p class="story-disclaimer">
-                This is a short original briefing based on public feed metadata. The original publisher owns the
-                reporting.
-              </p>
-            </div>
-          </div>
-        </article>
-
         <section id="about-view" class="route-view page-view" hidden>
           <div class="page-heading about-heading">
             <p class="section-label">About SignalLedger</p>
@@ -192,7 +152,7 @@
             <p class="section-label">What comes next</p>
             <h2>Editorial differentiation matters.</h2>
             <p>
-              The durable version of this product needs stronger curation, cleaner story archives, better market data,
+              The durable version of this product needs stronger curation, cleaner source quality, better market data,
               and a repeatable email habit. The current site is the working product foundation for that direction.
             </p>
           </section>
@@ -203,7 +163,7 @@
             <p class="section-label">Operations</p>
             <h1>Feed, storage, and launch readiness.</h1>
             <p id="ops-summary">
-              Loading current production-readiness diagnostics for feeds, story storage, and market data.
+              Loading current production-readiness diagnostics for feeds, signup storage, and market data.
             </p>
           </div>
           <div id="ops-readiness" class="ops-grid"></div>
@@ -232,7 +192,7 @@
         </div>
         <nav class="footer-links" aria-label="Footer links">
           <a href="/about">About</a>
-          <a href="/briefing/today">Today's briefing</a>
+          <a href="/">Today's briefing</a>
           <a href="/topic/markets">Markets</a>
           <a href="/topic/romania">Romania</a>
           <a href="mailto:hello@getsignalledger.com">Contact</a>
@@ -255,7 +215,12 @@
         <p class="card-description"></p>
         <div class="card-actions">
           <a class="card-link">Read original</a>
-          <a class="brief-link">Signal note</a>
+          <button class="brief-toggle" type="button" aria-expanded="false">Signal note</button>
+        </div>
+        <div class="inline-brief" hidden>
+          <p class="section-label">SignalLedger note</p>
+          <p class="inline-brief-summary"></p>
+          <ul class="inline-brief-points"></ul>
         </div>
       </article>
     </template>
