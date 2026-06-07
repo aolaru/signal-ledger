@@ -28,7 +28,10 @@ const marketCsv = `Symbol,Date,Time,Open,High,Low,Close,Volume,Name
 
 const env = {
   ASSETS: {
-    fetch: () => new Response("asset", { status: 200 }),
+    fetch: (request) => {
+      const pathname = new URL(request.url).pathname;
+      return pathname === "/" ? new Response("asset", { status: 200 }) : new Response("missing", { status: 404 });
+    },
   },
 };
 
@@ -52,7 +55,7 @@ function installCacheStub() {
 }
 
 function installFetchStub() {
-  globalThis.fetch = async (url, options = {}) => {
+  globalThis.fetch = async (url) => {
     const href = String(url);
 
     if (
@@ -77,17 +80,12 @@ function installFetchStub() {
       });
     }
 
-    if (href.includes("newsletter.example.test")) {
-      const body = options.body ? JSON.parse(options.body) : {};
-      return Response.json({ ok: true, email: body.email });
-    }
-
     throw new Error(`Unexpected fetch: ${href}`);
   };
 }
 
 async function json(path, options = {}) {
-  const response = await worker.fetch(new Request(`https://signal-ledger.test${path}`, options), env, ctx);
+  const response = await worker.fetch(new Request(`https://kreativtools.test${path}`, options), env, ctx);
   return {
     response,
     body: await response.json(),
@@ -100,118 +98,83 @@ describe("Worker API", () => {
     installFetchStub();
   });
 
-  it("returns a briefing with markets, sections, and clustered sources", async () => {
+  it("returns a compact briefing with markets, sections, and thumbnail metadata", async () => {
     const { response, body } = await json("/api/briefing");
 
     assert.equal(response.status, 200);
     assert.equal(body.markets.length, 6);
     assert.equal(body.sections.length, 6);
+    assert.equal(body.editorialBrief.title, "Today's operating brief");
+    assert.ok(body.editorialBrief.summary.includes("routing layer"));
+    assert.ok(body.editorialBrief.signals.length >= 3);
     assert.equal(body.lead.source, "Reuters");
     assert.ok(body.lead.storyId);
-    assert.ok(body.lead.clusterCount >= 1);
-    assert.ok(body.lead.clusterSources.includes("Reuters"));
-    assert.equal(body.lead.originalImageUrl, undefined);
     assert.equal(body.lead.feedSnippet, undefined);
-    assert.ok(body.lead.thumbnailUrl.startsWith("data:image/svg+xml"));
+    assert.equal(body.lead.thumbnailUrl, undefined);
+    assert.equal(body.lead.visualUrl, undefined);
+    assert.equal(body.lead.imageUrl, undefined);
+    assert.ok(body.lead.thumbnail.initials);
+    assert.ok(Number.isInteger(body.lead.thumbnail.variant));
     assert.ok(!body.lead.description.includes("Markets digest AI earnings"));
+    assert.ok(!body.lead.description.includes(body.lead.title));
+    assert.ok(!JSON.stringify(body).includes("data:image"));
     assert.ok(
-      new Set([body.lead, ...body.fastBriefing].filter(Boolean).map((story) => story.thumbnailUrl)).size > 1,
+      new Set(
+        [body.lead, ...body.fastBriefing]
+          .filter(Boolean)
+          .map((story) => `${story.thumbnail.tone}-${story.thumbnail.variant}-${story.thumbnail.initials}`),
+      ).size > 1,
     );
   });
 
-  it("returns topic search results from /api/news", async () => {
+  it("returns fixed topic results from /api/news", async () => {
     const { response, body } = await json("/api/news?topic=artificial%20intelligence");
 
     assert.equal(response.status, 200);
     assert.equal(body.topic, "artificial intelligence");
     assert.ok(body.articles.length > 0);
-    assert.ok(body.articles[0].visualUrl);
+    assert.ok(body.articles[0].thumbnail.initials);
+    assert.equal(body.articles[0].visualUrl, undefined);
   });
 
-  it("returns health diagnostics for feeds, newsletter, and readiness", async () => {
+  it("rejects unsupported topics from /api/news", async () => {
+    const { response, body } = await json("/api/news?topic=startups");
+
+    assert.equal(response.status, 404);
+    assert.equal(body.error, "Topic not available.");
+    assert.ok(body.availableTopics.includes("markets"));
+  });
+
+  it("returns health diagnostics for feeds and readiness", async () => {
     const { response, body } = await json("/api/health");
 
     assert.equal(response.status, 200);
-    assert.equal(body.newsletter.provider, "local-prototype");
     assert.equal(body.readiness[0].status, "ready");
     assert.ok(body.feeds.length >= 1);
   });
 
-  it("stores newsletter signups when KV is configured", async () => {
-    const writes = new Map();
-    const kvEnv = {
-      ...env,
-      NEWSLETTER_SIGNUPS: {
-        put: async (key, value) => {
-          writes.set(key, JSON.parse(value));
-        },
-      },
-    };
-
-    const response = await worker.fetch(
-      new Request("https://signal-ledger.test/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "reader@example.com" }),
-      }),
-      kvEnv,
-      ctx,
-    );
-    const body = await response.json();
-
-    assert.equal(response.status, 200);
-    assert.equal(body.storage, "cloudflare-kv");
-    assert.equal(writes.get("signup:reader@example.com").email, "reader@example.com");
-  });
-
-  it("sends newsletter signups to a configured webhook provider", async () => {
-    const response = await worker.fetch(
-      new Request("https://signal-ledger.test/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "reader@example.com" }),
-      }),
-      {
-        ...env,
-        NEWSLETTER_WEBHOOK_URL: "https://newsletter.example.test/subscribe",
-      },
-      ctx,
-    );
-    const body = await response.json();
-
-    assert.equal(response.status, 200);
-    assert.equal(body.provider, "webhook");
-  });
-
-  it("rejects invalid newsletter emails", async () => {
-    const response = await worker.fetch(
-      new Request("https://signal-ledger.test/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "not-an-email" }),
-      }),
-      env,
-      ctx,
-    );
-
-    assert.equal(response.status, 400);
-  });
-
   it("serves the SPA shell for client-side routes", async () => {
-    for (const path of ["/topic/markets", "/about", "/ops"]) {
-      const response = await worker.fetch(new Request(`https://signal-ledger.test${path}`), env, ctx);
+    for (const path of ["/topic/markets", "/about", "/privacy", "/terms", "/contact"]) {
+      const response = await worker.fetch(new Request(`https://kreativtools.test${path}`), env, ctx);
 
       assert.equal(response.status, 200);
       assert.equal(await response.text(), "asset");
     }
   });
 
+  it("does not expose the retired operations route as a public SPA page", async () => {
+    const response = await worker.fetch(new Request("https://kreativtools.test/ops"), env, ctx);
+
+    assert.equal(response.status, 404);
+    assert.equal(await response.text(), "missing");
+  });
+
   it("redirects retired story and today duplicate routes", async () => {
     for (const path of ["/story/sample-brief", "/briefing/today"]) {
-      const response = await worker.fetch(new Request(`https://signal-ledger.test${path}`), env, ctx);
+      const response = await worker.fetch(new Request(`https://kreativtools.test${path}`), env, ctx);
 
       assert.equal(response.status, 301);
-      assert.equal(response.headers.get("location"), "https://signal-ledger.test/");
+      assert.equal(response.headers.get("location"), "https://kreativtools.test/");
     }
   });
 });

@@ -410,18 +410,6 @@ function buildFeedUrl(topic) {
   return `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
 }
 
-function escapeXml(value = "") {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function svgToDataUrl(svg) {
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
-
 function getVisualPreset(topic, title = "") {
   const haystack = `${topic} ${title}`;
   return (
@@ -431,6 +419,10 @@ function getVisualPreset(topic, title = "") {
       label: "Signal",
     }
   );
+}
+
+function getToneKey(label = "Signal") {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "signal";
 }
 
 function getSourceInitials(source = "") {
@@ -444,64 +436,20 @@ function getSourceInitials(source = "") {
   );
 }
 
-function getSourceBadgeUrl(source = "") {
-  const normalized = source.trim() || "SL";
-  const initials = getSourceInitials(normalized);
-  const hash = hashString(normalized);
-  const hue = parseInt(hash.slice(0, 3), 36) % 360;
-  const background = `hsl(${hue} 45% 92%)`;
-  const border = `hsl(${hue} 38% 74%)`;
-  const text = `hsl(${hue} 52% 26%)`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="26" fill="${background}"/><rect x="8" y="8" width="112" height="112" rx="22" fill="none" stroke="${border}" stroke-width="6"/><text x="64" y="76" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="${text}">${escapeXml(initials)}</text></svg>`;
-  return svgToDataUrl(svg);
+function getThumbnailTopic(topic, title = "", source = "") {
+  return topic === "business technology markets geopolitics" ? `${title} ${source}` : topic;
 }
 
-function getVisualUrl(topic, title = "") {
-  const preset = getVisualPreset(topic, title);
-  const titleLabel = escapeXml(cleanTitle(title).slice(0, 66) || preset.label);
-  const sectionLabel = escapeXml(preset.label);
-  const [background, panel, ink] = preset.colors;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540"><rect width="900" height="540" fill="${background}"/><rect x="44" y="44" width="812" height="452" rx="30" fill="${panel}"/><path d="M76 392C170 330 240 362 338 268s176-120 280-76 142 32 206-24" fill="none" stroke="${preset.accent}" stroke-width="12" stroke-linecap="round"/><path d="M104 420L180 342 250 374 336 278 418 306 506 218 612 248 724 176" fill="none" stroke="${ink}" stroke-opacity="0.45" stroke-width="8" stroke-linecap="round"/><g fill="${ink}" fill-opacity="0.12"><rect x="112" y="244" width="54" height="176" rx="8"/><rect x="188" y="288" width="54" height="132" rx="8"/><rect x="264" y="226" width="54" height="194" rx="8"/><rect x="340" y="316" width="54" height="104" rx="8"/><rect x="416" y="266" width="54" height="154" rx="8"/></g><text x="88" y="122" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="${ink}" fill-opacity="0.72">${sectionLabel}</text><text x="88" y="188" font-family="Georgia, serif" font-size="48" font-weight="700" fill="${ink}">${titleLabel}</text></svg>`;
-  return svgToDataUrl(svg);
-}
-
-function getThumbnailMotif(variant, preset, ink, seed) {
-  const offset = seed % 28;
-
-  if (variant === 0) {
-    return `<circle cx="${238 - offset}" cy="78" r="38" fill="${preset.accent}" fill-opacity="0.18"/><path d="M52 228C88 188 120 206 154 162s72-58 112-34" fill="none" stroke="${preset.accent}" stroke-width="12" stroke-linecap="round"/><path d="M58 246L96 204 130 218 164 170 204 188 256 132" fill="none" stroke="${ink}" stroke-opacity="0.48" stroke-width="7" stroke-linecap="round"/><g fill="${ink}" fill-opacity="0.11"><rect x="62" y="184" width="24" height="64" rx="6"/><rect x="98" y="204" width="24" height="44" rx="6"/><rect x="134" y="166" width="24" height="82" rx="6"/></g>`;
-  }
-
-  if (variant === 1) {
-    return `<circle cx="108" cy="206" r="${68 + offset / 2}" fill="none" stroke="${preset.accent}" stroke-width="12" stroke-opacity="0.34"/><circle cx="108" cy="206" r="${34 + offset / 3}" fill="${preset.accent}" fill-opacity="0.16"/><circle cx="228" cy="96" r="44" fill="${ink}" fill-opacity="0.1"/><path d="M72 88h164M72 116h96M72 144h130" stroke="${ink}" stroke-width="9" stroke-linecap="round" stroke-opacity="0.24"/>`;
-  }
-
-  if (variant === 2) {
-    return `<path d="M22 248L298 86V298H22Z" fill="${preset.accent}" fill-opacity="0.18"/><path d="M54 236L134 160L178 186L264 98" fill="none" stroke="${ink}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.5"/><path d="M246 98h20v20" fill="none" stroke="${ink}" stroke-width="10" stroke-linecap="round" stroke-opacity="0.5"/><rect x="58" y="70" width="86" height="12" rx="6" fill="${preset.accent}" fill-opacity="0.45"/><rect x="58" y="94" width="132" height="12" rx="6" fill="${ink}" fill-opacity="0.14"/>`;
-  }
-
-  if (variant === 3) {
-    return `<g transform="translate(54 76)" fill="${preset.accent}" fill-opacity="0.2"><rect width="54" height="54" rx="12"/><rect x="66" width="54" height="54" rx="12" fill="${ink}" fill-opacity="0.16"/><rect x="132" width="54" height="54" rx="12"/><rect y="66" width="54" height="54" rx="12" fill="${ink}" fill-opacity="0.12"/><rect x="66" y="66" width="54" height="54" rx="12"/><rect x="132" y="66" width="54" height="54" rx="12" fill="${ink}" fill-opacity="0.2"/></g><path d="M58 238h198" stroke="${ink}" stroke-width="9" stroke-linecap="round" stroke-opacity="0.22"/><path d="M58 260h126" stroke="${preset.accent}" stroke-width="9" stroke-linecap="round" stroke-opacity="0.42"/>`;
-  }
-
-  if (variant === 4) {
-    return `<path d="M72 224V104h58v48h70V88h48" fill="none" stroke="${ink}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.38"/><g fill="${preset.accent}" fill-opacity="0.58"><circle cx="72" cy="224" r="14"/><circle cx="130" cy="104" r="14"/><circle cx="200" cy="152" r="14"/><circle cx="248" cy="88" r="14"/></g><circle cx="114" cy="196" r="62" fill="${preset.accent}" fill-opacity="0.1"/><rect x="176" y="210" width="70" height="42" rx="12" fill="${ink}" fill-opacity="0.1"/>`;
-  }
-
-  return `<g fill="${ink}" fill-opacity="0.12"><rect x="58" y="${132 - offset / 3}" width="34" height="${118 + offset}" rx="8"/><rect x="106" y="${96 + offset / 4}" width="34" height="${154 - offset}" rx="8"/><rect x="154" y="${120 - offset / 5}" width="34" height="${130 + offset / 2}" rx="8"/><rect x="202" y="${82 + offset / 2}" width="34" height="${168 - offset / 2}" rx="8"/></g><path d="M52 250h216" stroke="${ink}" stroke-width="8" stroke-linecap="round" stroke-opacity="0.2"/><circle cx="236" cy="76" r="42" fill="${preset.accent}" fill-opacity="0.2"/><path d="M66 82h104" stroke="${preset.accent}" stroke-width="10" stroke-linecap="round" stroke-opacity="0.42"/>`;
-}
-
-function getThumbnailFallbackUrl(topic, title = "", source = "") {
-  const preset = getVisualPreset(topic, title);
-  const [background, panel, ink] = preset.colors;
-  const sectionLabel = escapeXml(preset.label);
-  const initials = escapeXml(getSourceInitials(source || preset.label));
+function getThumbnailMeta(topic, title = "", source = "") {
+  const thumbnailTopic = getThumbnailTopic(topic, title, source);
+  const preset = getVisualPreset(thumbnailTopic, title);
   const hash = hashString(`${topic}|${title}|${source}`);
-  const variant = parseInt(hash.slice(0, 2), 36) % 6;
-  const seed = parseInt(hash.slice(2, 6), 36) || 0;
-  const motif = getThumbnailMotif(variant, preset, ink, seed);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320"><rect width="320" height="320" fill="${background}"/><rect x="22" y="22" width="276" height="276" rx="26" fill="${panel}"/><rect x="22" y="22" width="276" height="276" rx="26" fill="none" stroke="${ink}" stroke-opacity="0.08" stroke-width="2"/>${motif}<text x="42" y="64" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${ink}" fill-opacity="0.72">${sectionLabel}</text><text x="160" y="174" text-anchor="middle" font-family="Arial, sans-serif" font-size="54" font-weight="800" fill="${ink}" fill-opacity="0.76">${initials}</text></svg>`;
-  return svgToDataUrl(svg);
+  return {
+    label: preset.label,
+    tone: getToneKey(preset.label),
+    initials: getSourceInitials(source || preset.label),
+    variant: parseInt(hash.slice(0, 2), 36) % 5,
+  };
 }
 
 function extractClusterSources(description = "", primarySource = "") {
@@ -667,24 +615,6 @@ function hasEnoughRelevantArticles(articles, relevance, limit) {
   return articles.filter((article) => getRelevanceScore(article, relevance) >= minimumScore).length >= minimumCount;
 }
 
-function buildWatchPointText(article) {
-  const text = `${article.title || ""} ${article.feedSnippet || article.description || ""}`.toLowerCase();
-
-  if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/.test(text)) {
-    return "Watch whether the story changes pricing, investor positioning, or expectations in the next market session.";
-  }
-
-  if (/(war|tariff|sanction|election|government|minister|regulation)/.test(text)) {
-    return "Watch for policy responses, official statements, and second-order effects for companies exposed to the region.";
-  }
-
-  if (/(ai|chip|software|startup|technology|app)/.test(text)) {
-    return "Watch for product, regulatory, or capital-allocation signals that show whether this becomes a durable technology trend.";
-  }
-
-  return "Watch whether other credible sources confirm the direction and whether the story develops beyond the first headline.";
-}
-
 function getStoryAngle(article, fallbackTopic) {
   const text = `${article.title || ""} ${article.feedSnippet || article.description || ""}`.toLowerCase();
 
@@ -703,45 +633,26 @@ function getStoryAngle(article, fallbackTopic) {
   return `${fallbackTopic.toLowerCase()} agenda`;
 }
 
-function getWhyItMatters(article, fallbackTopic) {
-  const title = cleanTitle(article.title || "This story");
+function buildBriefSummary(article, fallbackTopic) {
   const angle = getStoryAngle(article, fallbackTopic);
+  const sourceNote =
+    article.clusterCount > 1
+      ? `${article.clusterCount} sources are tracking it.`
+      : `${article.source || "The source"} surfaced it.`;
 
   if (angle === "market positioning") {
-    return `${title} matters as a market-positioning signal: it may shift investor expectations, sector pricing, or risk appetite in the next trading cycle.`;
+    return `Market signal: watch pricing, investor positioning, and risk appetite. ${sourceNote}`;
   }
 
   if (angle === "policy and geopolitical risk") {
-    return `${title} matters because policy and geopolitical decisions can quickly change company exposure, supply chains, and capital flows.`;
+    return `Policy signal: watch exposure, supply chains, and capital flows. ${sourceNote}`;
   }
 
   if (angle === "technology adoption and capital allocation") {
-    return `${title} matters because technology adoption is increasingly tied to regulation, competitive positioning, and capital allocation.`;
+    return `Tech signal: watch adoption, regulation, and capital allocation. ${sourceNote}`;
   }
 
-  return `${title} matters because it adds a fresh signal to the ${fallbackTopic.toLowerCase()} agenda for business readers.`;
-}
-
-function buildBriefSummary(article, fallbackTopic) {
-  return getWhyItMatters(article, fallbackTopic);
-}
-
-function buildSourceContext(article) {
-  if (article.clusterCount > 1 && article.clusterSources?.length) {
-    return `${article.clusterCount} sources in the current briefing snapshot are tracking this story: ${article.clusterSources
-      .slice(0, 4)
-      .join(", ")}.`;
-  }
-
-  return `${article.source || "The source"} is the primary source surfaced in the current briefing snapshot.`;
-}
-
-function buildKeyPoints(article, fallbackTopic) {
-  const angle = getStoryAngle(article, fallbackTopic);
-  return [
-    `Why it matters: This is a ${angle} story for business readers.`,
-    `What to watch: ${buildWatchPointText(article)}`,
-  ];
+  return `Signal: a fresh datapoint for the ${fallbackTopic.toLowerCase()} agenda. ${sourceNote}`;
 }
 
 function buildArticle(item, topic, sourceFallback, provider) {
@@ -761,8 +672,6 @@ function buildArticle(item, topic, sourceFallback, provider) {
     provider === "google-news" ? extractClusterSources(rawDescription, source) : [source].filter(Boolean);
   const title = cleanTitle(decodeEntities(item.title || "Untitled article"));
   const storyId = hashString(`${link}|${source}|${title}`);
-  const visualUrl = getVisualUrl(topic, title);
-  const thumbnailFallbackUrl = getThumbnailFallbackUrl(topic, title, source);
   const feedSnippet = stripHtml(rawDescription);
 
   const article = {
@@ -772,9 +681,7 @@ function buildArticle(item, topic, sourceFallback, provider) {
     publishedAt: item.pubDate || item.published || item.updated || "",
     source,
     sourceUrl,
-    imageUrl: getSourceBadgeUrl(source),
-    thumbnailUrl: thumbnailFallbackUrl,
-    visualUrl,
+    thumbnail: getThumbnailMeta(topic, title, source),
     clusterSources,
     clusterCount: clusterSources.length,
     description: "",
@@ -786,12 +693,7 @@ function buildArticle(item, topic, sourceFallback, provider) {
   return {
     ...article,
     description: briefSummary,
-    whyItMatters: getWhyItMatters(article, topic || "Top stories"),
     briefSummary,
-    watchPoint: buildWatchPointText(article),
-    sourceContext: buildSourceContext(article),
-    keyPoints: buildKeyPoints(article, topic || "Top stories"),
-    angle: getStoryAngle(article, topic || "Top stories"),
   };
 }
 
@@ -832,7 +734,7 @@ async function fetchRss(url) {
   return parser.parse(
     await fetchText(url, {
       "Accept": "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.1",
-      "User-Agent": "Mozilla/5.0 SignalLedger/1.0",
+      "User-Agent": "Mozilla/5.0 KreativTools/1.0",
     }),
   );
 }
@@ -973,8 +875,73 @@ async function fetchArticles(topic, limit = 12, feeds = [], options = {}) {
 }
 
 function toPublicArticle(article) {
-  const { feedSnippet, ...publicArticle } = article;
-  return publicArticle;
+  return {
+    storyId: article.storyId,
+    title: article.title,
+    link: article.link,
+    publishedAt: article.publishedAt,
+    source: article.source,
+    description: article.briefSummary || article.description || "",
+    thumbnail: article.thumbnail,
+  };
+}
+
+function joinPlainList(items = []) {
+  if (items.length <= 1) {
+    return items[0] || "";
+  }
+
+  if (items.length === 2) {
+    return `${items[0]} and ${items[1]}`;
+  }
+
+  return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
+}
+
+function countSectionArticles(sectionData, key) {
+  return sectionData.find((section) => section.key === key)?.articles.length || 0;
+}
+
+function buildEditorialBrief(topStories = [], sectionData = []) {
+  const storyText = topStories
+    .map((article) => `${article.title || ""} ${article.feedSnippet || ""} ${article.briefSummary || ""}`)
+    .join(" ");
+  const focusAreas = [];
+  const signals = [];
+
+  if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/i.test(storyText) || countSectionArticles(sectionData, "markets") >= 3) {
+    focusAreas.push("markets");
+    signals.push("Markets: use price and macro headlines as a triage cue, then verify the full context with the publisher.");
+  }
+
+  if (/(ai|chip|software|startup|technology|app|semiconductor)/i.test(storyText) || countSectionArticles(sectionData, "tech") >= 3) {
+    focusAreas.push("technology");
+    signals.push("Technology: separate launch noise from adoption, regulation, and capital-allocation signals.");
+  }
+
+  if (/(war|tariff|sanction|election|government|minister|trade|geopolitic)/i.test(storyText) || countSectionArticles(sectionData, "world") >= 3) {
+    focusAreas.push("policy risk");
+    signals.push("Policy: map geopolitical stories to supply-chain, demand, rates, and regulatory exposure.");
+  }
+
+  if (countSectionArticles(sectionData, "europe") || countSectionArticles(sectionData, "romania")) {
+    focusAreas.push("Europe and Romania");
+    signals.push("Regional watch: Europe and Romania cards are included when they add business, policy, or market context.");
+  }
+
+  signals.push("Source discipline: KreativTools gives a short original scan; the original publisher owns the reporting.");
+
+  if (signals.length < 4) {
+    signals.push("Time filter: read the note, scan the lead, then open only the stories that change a decision.");
+  }
+
+  const focusSummary = focusAreas.length ? joinPlainList([...new Set(focusAreas)].slice(0, 4)) : "business signal";
+
+  return {
+    title: "Today's operating brief",
+    summary: `The current scan is weighted toward ${focusSummary}. Use this page as a routing layer: identify what deserves deeper reading, then follow the original source for the full report.`,
+    signals: signals.slice(0, 4),
+  };
 }
 
 async function buildBriefing(env) {
@@ -1009,6 +976,7 @@ async function buildBriefing(env) {
 
   return {
     generatedAt: new Date().toISOString(),
+    editorialBrief: buildEditorialBrief(topStories, sectionData),
     lead: topStories[0] ? toPublicArticle(topStories[0]) : null,
     fastBriefing: topStories.slice(1, 9).map(toPublicArticle),
     markets: getFallbackMarketSnapshot(),
@@ -1056,7 +1024,7 @@ async function fetchMarket(market) {
 
       const csv = await fetchText(url, {
         "Accept": "text/csv,*/*",
-        "User-Agent": "Mozilla/5.0 SignalLedger/1.0",
+        "User-Agent": "Mozilla/5.0 KreativTools/1.0",
       });
       return {
         symbol,
@@ -1123,133 +1091,28 @@ function getFallbackMarketSnapshot() {
   }));
 }
 
-async function subscribeWithButtondown(env, email, request) {
-  const response = await fetch("https://api.buttondown.com/v1/subscribers", {
-    method: "POST",
-    headers: {
-      Authorization: `Token ${env.BUTTONDOWN_API_KEY}`,
-      "Content-Type": "application/json",
-      "X-Buttondown-Collision-Behavior": "add",
-    },
-    body: JSON.stringify({
-      email_address: email,
-      type: "regular",
-      tags: ["signalledger"],
-      notes: "Subscribed from SignalLedger website",
-      ip_address: request.headers.get("CF-Connecting-IP") || "",
-    }),
-  });
+const publicTopics = [
+  { topic: "artificial intelligence", sectionKey: "tech", aliases: ["ai", "artificial intelligence"] },
+  { topic: "markets", sectionKey: "markets", aliases: ["markets"] },
+  { topic: "romania", sectionKey: "romania", aliases: ["romania"] },
+  { topic: "europe", sectionKey: "europe", aliases: ["europe"] },
+];
+const publicTopicSections = new Map(
+  publicTopics.flatMap((topicConfig) => topicConfig.aliases.map((alias) => [alias, topicConfig])),
+);
 
-  if (!response.ok && response.status !== 409) {
-    const text = await response.text();
-    throw new Error(`Buttondown subscribe failed: ${response.status} ${text.slice(0, 120)}`);
-  }
-
-  return "buttondown";
+function normalizeTopicKey(topic = "") {
+  return topic.trim().toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
 }
 
-async function subscribeWithKit(env, email) {
-  const response = await fetch("https://api.kit.com/v4/subscribers", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Kit-Api-Key": env.KIT_API_KEY,
-    },
-    body: JSON.stringify({
-      email_address: email,
-      state: "active",
-      fields: {
-        Source: "SignalLedger website",
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Kit subscribe failed: ${response.status} ${text.slice(0, 120)}`);
+function findPublicTopic(topic = "") {
+  const topicConfig = publicTopicSections.get(normalizeTopicKey(topic));
+  if (!topicConfig) {
+    return null;
   }
 
-  return "kit";
-}
-
-async function subscribeWithWebhook(env, email, request) {
-  const response = await fetch(env.NEWSLETTER_WEBHOOK_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email,
-      source: "signalledger-web",
-      createdAt: new Date().toISOString(),
-      userAgent: request.headers.get("User-Agent") || "",
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Newsletter webhook failed: ${response.status} ${text.slice(0, 120)}`);
-  }
-
-  return "webhook";
-}
-
-async function storeNewsletterSignup(env, email, request) {
-  const signup = {
-    email,
-    createdAt: new Date().toISOString(),
-    source: "signalledger-web",
-    userAgent: request.headers.get("User-Agent") || "",
-  };
-
-  let provider = "local-prototype";
-
-  if (env.BUTTONDOWN_API_KEY) {
-    provider = await subscribeWithButtondown(env, email, request);
-  } else if (env.KIT_API_KEY) {
-    provider = await subscribeWithKit(env, email);
-  } else if (env.NEWSLETTER_WEBHOOK_URL) {
-    provider = await subscribeWithWebhook(env, email, request);
-  }
-
-  if (!env.NEWSLETTER_SIGNUPS) {
-    return {
-      stored: false,
-      storage: "local-prototype",
-      provider,
-    };
-  }
-
-  await env.NEWSLETTER_SIGNUPS.put(`signup:${email.toLowerCase()}`, JSON.stringify(signup));
-  return {
-    stored: true,
-    storage: "cloudflare-kv",
-    provider,
-  };
-}
-
-function findSection(topic = "") {
-  const normalized = topic.trim().toLowerCase();
-  return sections.find((section) => {
-    const label = section.label.toLowerCase();
-    return normalized === section.key || normalized === label || normalized.includes(section.key);
-  });
-}
-
-function getActiveNewsletterProvider(env) {
-  if (env.BUTTONDOWN_API_KEY) {
-    return "buttondown";
-  }
-
-  if (env.KIT_API_KEY) {
-    return "kit";
-  }
-
-  if (env.NEWSLETTER_WEBHOOK_URL) {
-    return "webhook";
-  }
-
-  return "local-prototype";
+  const section = sections.find((item) => item.key === topicConfig.sectionKey);
+  return section ? { ...topicConfig, section } : null;
 }
 
 function getConfiguredFeeds() {
@@ -1270,41 +1133,32 @@ function getConfiguredFeeds() {
   }));
 }
 
-function getReadiness(env) {
+function getReadiness() {
   return [
     {
       name: "Reader flow",
       status: "ready",
-      detail: "Briefing cards now keep SignalLedger notes inline and send readers to the original publisher.",
+      detail: "Briefing cards keep KreativTools editorial notes inline and send readers to the original publisher.",
     },
     {
-      name: "Newsletter provider",
-      status: getActiveNewsletterProvider(env) === "local-prototype" ? "action-needed" : "ready",
-      detail:
-        getActiveNewsletterProvider(env) === "local-prototype"
-          ? "Configure Buttondown, Kit, or a newsletter webhook before launch."
-          : `Newsletter signups are forwarded to ${getActiveNewsletterProvider(env)}.`,
+      name: "Fixed topics",
+      status: "ready",
+      detail: "Public topic pages are limited to AI, markets, Europe, and Romania instead of open-ended generated searches.",
     },
     {
-      name: "Signup storage",
-      status: env.NEWSLETTER_SIGNUPS ? "ready" : "advisory",
-      detail: env.NEWSLETTER_SIGNUPS
-        ? "Newsletter signups are also stored in Cloudflare KV."
-        : "NEWSLETTER_SIGNUPS KV is optional but recommended for audit and backup.",
+      name: "Market data",
+      status: "advisory",
+      detail: "Market cards use live provider data with fallback snapshots when the provider is unavailable.",
     },
   ];
 }
 
-function getHealthReport(env) {
+function getHealthReport() {
   const googleFallback = getDiagnosticSnapshot(feedDiagnostics).filter((entry) => entry.provider === "google-news");
 
   return {
     generatedAt: new Date().toISOString(),
-    newsletter: {
-      provider: getActiveNewsletterProvider(env),
-      signupStorage: env.NEWSLETTER_SIGNUPS ? "cloudflare-kv" : "none",
-    },
-    readiness: getReadiness(env),
+    readiness: getReadiness(),
     feeds: [...getConfiguredFeeds(), ...googleFallback],
     markets: getDiagnosticSnapshot(marketDiagnostics),
   };
@@ -1326,41 +1180,32 @@ async function handleApi(request, env, ctx) {
     }
 
     if (url.pathname === "/api/health") {
-      return jsonResponse(getHealthReport(env), 200, 30);
+      return jsonResponse(getHealthReport(), 200, 30);
     }
 
     if (url.pathname === "/api/news") {
       const topic = url.searchParams.get("topic")?.trim() || "";
-      const section = findSection(topic);
-      const feeds = section?.feeds || [];
+      const publicTopic = findPublicTopic(topic);
 
-      return cachedJson(request, ctx, 600, async () => {
-        const articles = await fetchArticles(topic, 12, feeds, { relevance: section?.relevance });
-
-        return {
-          topic: topic || "Top stories",
-          articles: articles.map(toPublicArticle),
-        };
-      });
-    }
-
-    if (url.pathname === "/api/subscribe" && request.method === "POST") {
-      const body = await request.json().catch(() => ({}));
-      const email = typeof body.email === "string" ? body.email.trim() : "";
-
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return jsonResponse({ error: "Enter a valid email address." }, 400);
+      if (!publicTopic) {
+        return jsonResponse(
+          {
+            error: "Topic not available.",
+            availableTopics: publicTopics.map((item) => item.topic),
+          },
+          404,
+        );
       }
 
-      const storage = await storeNewsletterSignup(env, email, request);
-      return jsonResponse({
-        ok: true,
-        message:
-          storage.provider === "local-prototype"
-            ? "Signup saved locally. Configure a newsletter provider to send subscribers to a real list."
-            : `Subscription forwarded to ${storage.provider}.`,
-        storage: storage.storage,
-        provider: storage.provider,
+      return cachedJson(request, ctx, 600, async () => {
+        const articles = await fetchArticles(publicTopic.topic, 12, publicTopic.section.feeds, {
+          relevance: publicTopic.section.relevance,
+        });
+
+        return {
+          topic: publicTopic.topic,
+          articles: articles.map(toPublicArticle),
+        };
       });
     }
 
@@ -1388,7 +1233,10 @@ export default {
       return Response.redirect(new URL("/", url), 301);
     }
 
-    if (url.pathname.startsWith("/topic/") || url.pathname === "/about" || url.pathname === "/ops") {
+    if (
+      url.pathname.startsWith("/topic/") ||
+      ["/about", "/privacy", "/terms", "/contact"].includes(url.pathname)
+    ) {
       const indexUrl = new URL("/", url);
       return env.ASSETS.fetch(new Request(indexUrl, request));
     }

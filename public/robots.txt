@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://getsignalledger.com/sitemap.xml
+Sitemap: https://kreativtools.com/sitemap.xml

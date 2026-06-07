@@ -1,22 +1,12 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "signal-ledger",
+  "name": "kreativtools-briefing",
   "main": "src/worker.mjs",
   "compatibility_date": "2026-05-09",
   "assets": {
     "directory": "./public",
     "binding": "ASSETS"
   },
-  // To persist newsletter signups, create a KV namespace:
-  // npx wrangler kv namespace create NEWSLETTER_SIGNUPS
-  // Then add:
-  // "kv_namespaces": [
-  //   { "binding": "NEWSLETTER_SIGNUPS", "id": "your-production-kv-id" }
-  // ],
-  // Optional secrets / vars for a real newsletter provider:
-  // npx wrangler secret put BUTTONDOWN_API_KEY
-  // npx wrangler secret put KIT_API_KEY
-  // npx wrangler secret put NEWSLETTER_WEBHOOK_URL
   "observability": {
     "enabled": true
   }

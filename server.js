@@ -5,16 +5,6 @@ const app = express();
 const port = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, "public");
 const localCache = new Map();
-const signupStore = new Map();
-
-function createKvBinding(store) {
-  return {
-    get: async (key) => store.get(key) ?? null,
-    put: async (key, value) => {
-      store.set(key, value);
-    },
-  };
-}
 
 function ensureWorkerCache() {
   if (globalThis.caches) {
@@ -32,12 +22,7 @@ function ensureWorkerCache() {
 }
 
 function getWorkerEnv() {
-  return {
-    NEWSLETTER_SIGNUPS: createKvBinding(signupStore),
-    BUTTONDOWN_API_KEY: process.env.BUTTONDOWN_API_KEY,
-    KIT_API_KEY: process.env.KIT_API_KEY,
-    NEWSLETTER_WEBHOOK_URL: process.env.NEWSLETTER_WEBHOOK_URL,
-  };
+  return {};
 }
 
 function getWorkerContext() {
@@ -117,7 +102,7 @@ app.get("/briefing/today", (_req, res) => {
   res.redirect(301, "/");
 });
 
-app.get(["/about", "/ops"], (_req, res) => {
+app.get(["/about", "/privacy", "/terms", "/contact"], (_req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 

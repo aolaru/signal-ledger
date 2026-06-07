@@ -1,7 +1,7 @@
 {
-  "name": "signalledger",
+  "name": "kreativtools-briefing",
   "version": "1.0.0",
-  "description": "SignalLedger business, technology, markets, and world news briefing",
+  "description": "KreativTools business, technology, markets, and Europe briefing",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

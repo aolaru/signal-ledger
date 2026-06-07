@@ -1,0 +1,2 @@
+# Replace this placeholder with the real Google AdSense publisher ID before requesting review.
+google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

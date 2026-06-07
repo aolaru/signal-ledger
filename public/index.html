@@ -5,27 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="SignalLedger is a focused business, technology, markets, and world briefing with original notes built from public RSS signals."
+      content="KreativTools is a focused business, technology, markets, and Europe briefing with original editorial notes built from public source signals."
     />
     <meta id="robots-meta" name="robots" content="index,follow" />
-    <meta property="og:site_name" content="SignalLedger" />
+    <meta property="og:site_name" content="KreativTools" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="SignalLedger Briefing" />
+    <meta property="og:title" content="KreativTools Briefing" />
     <meta
       property="og:description"
-      content="SignalLedger is a focused business, technology, markets, and world briefing with original notes built from public RSS signals."
+      content="KreativTools is a focused business, technology, markets, and Europe briefing with original editorial notes built from public source signals."
     />
-    <meta property="og:url" content="https://getsignalledger.com/" />
-    <meta property="og:image" content="https://getsignalledger.com/social-card.svg" />
+    <meta property="og:url" content="https://kreativtools.com/" />
+    <meta property="og:image" content="https://kreativtools.com/social-card.svg" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="SignalLedger Briefing" />
+    <meta name="twitter:title" content="KreativTools Briefing" />
     <meta
       name="twitter:description"
-      content="SignalLedger is a focused business, technology, markets, and world briefing with original notes built from public RSS signals."
+      content="KreativTools is a focused business, technology, markets, and Europe briefing with original editorial notes built from public source signals."
     />
-    <meta name="twitter:image" content="https://getsignalledger.com/social-card.svg" />
-    <link id="canonical-link" rel="canonical" href="https://getsignalledger.com/" />
-    <title>SignalLedger Briefing</title>
+    <meta name="twitter:image" content="https://kreativtools.com/social-card.svg" />
+    <link id="canonical-link" rel="canonical" href="https://kreativtools.com/" />
+    <title>KreativTools Briefing</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -38,18 +38,18 @@
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "SignalLedger",
-        "url": "https://getsignalledger.com/",
-        "description": "SignalLedger is a focused business, technology, markets, and world briefing with original notes built from public RSS signals."
+        "name": "KreativTools",
+        "url": "https://kreativtools.com/",
+        "description": "KreativTools is a focused business, technology, markets, and Europe briefing with original editorial notes built from public source signals."
       }
     </script>
   </head>
   <body>
     <div class="page-shell">
       <header class="topbar">
-        <a class="brand" href="/" aria-label="SignalLedger home">
-          <span class="brand-mark">SL</span>
-          <span>SignalLedger</span>
+        <a class="brand" href="/" aria-label="KreativTools home">
+          <span class="brand-mark">KT</span>
+          <span>KreativTools</span>
         </a>
         <nav class="nav-tabs" aria-label="Briefing sections">
           <a href="/" data-nav="today">Today</a>
@@ -68,43 +68,28 @@
             <p id="topic-description"></p>
           </div>
 
-          <section class="search-section">
-            <div>
-              <p class="section-label">Search another topic</p>
-              <h2>Keep it focused</h2>
-            </div>
-            <form id="search-form" class="search-bar">
-              <input
-                id="topic-input"
-                name="topic"
-                type="text"
-                placeholder="AI regulation, startups, Romania, China..."
-                autocomplete="off"
-              />
-              <button type="submit">Search topic</button>
-            </form>
-          </section>
-
-          <nav class="topic-chip-list" aria-label="Popular topics">
+          <nav class="topic-chip-list" aria-label="Available topics">
             <a href="/topic/artificial-intelligence">AI</a>
             <a href="/topic/markets">Markets</a>
             <a href="/topic/romania">Romania</a>
             <a href="/topic/europe">Europe</a>
-            <a href="/topic/startups">Startups</a>
-            <a href="/topic/energy">Energy</a>
           </nav>
 
-          <p id="status" class="status">Choose a topic.</p>
+          <p id="status" class="status">Loading topic briefing.</p>
           <section id="search-results" class="news-grid" aria-live="polite"></section>
         </section>
 
         <section id="today-view" class="route-view page-view" hidden>
           <div class="page-heading">
             <p class="section-label">Today's briefing</p>
-            <h1>Today's business signal, condensed.</h1>
+            <h1>Business signal, made easier to scan.</h1>
             <p id="today-summary">Loading the latest briefing...</p>
           </div>
+          <section id="editorial-brief" class="editorial-brief" aria-live="polite"></section>
           <section id="today-lead" class="today-lead" aria-live="polite"></section>
+          <aside class="ad-slot" data-ad-slot="briefing-banner" aria-label="Advertisement">
+            <span>Advertisement</span>
+          </aside>
           <section class="today-layout">
             <div>
               <h2>Top stories</h2>
@@ -115,79 +100,137 @@
 
         <section id="about-view" class="route-view page-view" hidden>
           <div class="page-heading about-heading">
-            <p class="section-label">About SignalLedger</p>
-            <h1>A fast news desk for business readers.</h1>
+            <p class="section-label">About KreativTools</p>
+            <h1>A practical briefing desk for business readers.</h1>
             <p>
-              SignalLedger is a briefing product for people who want market, technology, business, and
-              geopolitical context without opening ten tabs first.
+              KreativTools helps readers understand the business, market, technology, and regional signals that matter
+              without opening ten tabs first.
             </p>
           </div>
           <div class="method-grid">
             <article class="method-card">
               <p class="section-label">Source layer</p>
-              <h2>Direct publisher feeds first</h2>
+              <h2>Public sources, clearly attributed</h2>
               <p>
-                SignalLedger uses public RSS feeds as discovery signals, keeps source attribution visible, and sends
-                readers to the original publisher for the full reporting.
+                KreativTools uses public feeds as discovery signals, keeps source attribution visible, and sends readers
+                to the original publisher for full reporting.
               </p>
             </article>
             <article class="method-card">
               <p class="section-label">Reader flow</p>
-              <h2>Start with the strongest brief</h2>
+              <h2>Start with a short editorial brief</h2>
               <p>
-                The product now favors a short daily briefing first, then topic pages for readers who want to go deeper
-                on AI, markets, Europe, Romania, or another search.
+                The homepage starts with an original editorial note, then a small set of curated cards and fixed topic
+                pages for AI, markets, Europe, and Romania.
               </p>
             </article>
             <article class="method-card">
               <p class="section-label">Product direction</p>
               <h2>Signal over feed volume</h2>
               <p>
-                The goal is not to be another infinite feed. It is to package the few stories that deserve a business
-                reader's attention, with original brief pages and clearer source context.
+                The goal is not to copy publisher sites or become an infinite feed. It is to add a useful scan layer
+                that helps readers decide what deserves more time.
               </p>
             </article>
           </div>
           <section class="method-note">
-            <p class="section-label">What comes next</p>
-            <h2>Editorial differentiation matters.</h2>
+            <p class="section-label">Editorial standard</p>
+            <h2>Original context comes first.</h2>
             <p>
-              The durable version of this product needs stronger curation, cleaner source quality, better market data,
-              and a repeatable email habit. The current site is the working product foundation for that direction.
+              KreativTools summarizes signals in its own words, avoids republishing full articles, and links readers to
+              the original publisher whenever they want the full story.
             </p>
           </section>
         </section>
 
-        <section id="ops-view" class="route-view page-view" hidden>
+        <section id="privacy-view" class="route-view page-view legal-view" hidden>
           <div class="page-heading about-heading">
-            <p class="section-label">Operations</p>
-            <h1>Feed, storage, and launch readiness.</h1>
-            <p id="ops-summary">
-              Loading current production-readiness diagnostics for feeds, signup storage, and market data.
+            <p class="section-label">Privacy</p>
+            <h1>Privacy Policy.</h1>
+            <p>
+              This policy explains how KreativTools handles basic site data, public source links, analytics, and ads.
             </p>
           </div>
-          <div id="ops-readiness" class="ops-grid"></div>
-          <div class="ops-grid ops-diagnostics">
-            <article class="method-card ops-card">
-              <p class="section-label">Feed diagnostics</p>
-              <h2>Source health</h2>
-              <div id="ops-feeds" class="ops-list"></div>
-            </article>
-            <article class="method-card ops-card">
-              <p class="section-label">Market diagnostics</p>
-              <h2>Market provider health</h2>
-              <div id="ops-markets" class="ops-list"></div>
-            </article>
+          <div class="legal-copy">
+            <h2>Information we process</h2>
+            <p>
+              KreativTools does not ask readers to create accounts. Standard server logs may include request metadata
+              such as IP address, browser type, page URL, referrer, and timestamp for security, debugging, analytics,
+              and abuse prevention.
+            </p>
+            <h2>Advertising and cookies</h2>
+            <p>
+              If advertising is enabled, Google and other advertising partners may use cookies, web beacons, IP
+              addresses, or similar technologies to serve and measure ads. Learn how Google uses data on partner sites
+              at <a href="https://policies.google.com/technologies/partner-sites" rel="noreferrer" target="_blank">Google's partner sites policy</a>.
+            </p>
+            <h2>Public sources</h2>
+            <p>
+              The briefing uses public publisher feeds and links to original reporting. KreativTools does not claim
+              ownership of publisher articles, headlines, images, or reporting.
+            </p>
+            <h2>Contact</h2>
+            <p>
+              For privacy or content questions, email <a href="mailto:hello@kreativtools.com">hello@kreativtools.com</a>.
+            </p>
+          </div>
+        </section>
+
+        <section id="terms-view" class="route-view page-view legal-view" hidden>
+          <div class="page-heading about-heading">
+            <p class="section-label">Terms</p>
+            <h1>Terms of Use.</h1>
+            <p>Use KreativTools as a quick briefing aid, not as financial, legal, investment, or professional advice.</p>
+          </div>
+          <div class="legal-copy">
+            <h2>Content and attribution</h2>
+            <p>
+              KreativTools provides original summaries and context based on public source signals. Full reporting belongs
+              to the original publishers, and article links send readers to those publishers.
+            </p>
+            <h2>No professional advice</h2>
+            <p>
+              Market, technology, and business content is informational only. Always verify facts and consult qualified
+              professionals before making financial, legal, or business decisions.
+            </p>
+            <h2>Acceptable use</h2>
+            <p>
+              Do not misuse the site, interfere with its operation, scrape it aggressively, or use it to infringe the
+              rights of publishers, readers, or third parties.
+            </p>
+            <h2>Contact</h2>
+            <p>
+              For terms or content questions, email <a href="mailto:hello@kreativtools.com">hello@kreativtools.com</a>.
+            </p>
+          </div>
+        </section>
+
+        <section id="contact-view" class="route-view page-view legal-view" hidden>
+          <div class="page-heading about-heading">
+            <p class="section-label">Contact</p>
+            <h1>Contact KreativTools.</h1>
+            <p>
+              Send corrections, source questions, advertising questions, or privacy requests to the KreativTools inbox.
+            </p>
+          </div>
+          <div class="legal-copy">
+            <h2>Email</h2>
+            <p><a href="mailto:hello@kreativtools.com">hello@kreativtools.com</a></p>
+            <h2>Corrections</h2>
+            <p>
+              If a briefing card mislabels a source or misses important context, include the page URL, source URL, and a
+              short description of the issue.
+            </p>
           </div>
         </section>
       </main>
 
       <footer class="site-footer">
         <div class="footer-brand">
-          <span class="brand-mark">SL</span>
+          <span class="brand-mark">KT</span>
           <div>
-            <strong>SignalLedger</strong>
-            <p>Business, tech, markets, and geopolitical signal in one fast scan.</p>
+            <strong>KreativTools</strong>
+            <p>Business, tech, markets, and regional signal in one fast scan.</p>
           </div>
         </div>
         <nav class="footer-links" aria-label="Footer links">
@@ -195,18 +238,24 @@
           <a href="/">Today's briefing</a>
           <a href="/topic/markets">Markets</a>
           <a href="/topic/romania">Romania</a>
-          <a href="mailto:hello@getsignalledger.com">Contact</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="/contact">Contact</a>
         </nav>
         <p class="footer-note">
-          Built on public RSS sources with direct publisher feeds first. Headlines link to original publishers; market
-          data can be delayed.
+          Built on public source signals with direct publisher links. Original publishers own their reporting; market
+          data and source feeds can be delayed.
         </p>
       </footer>
     </div>
 
     <template id="card-template">
       <article class="news-card">
-        <img class="card-thumbnail" alt="" loading="lazy" />
+        <div class="card-thumbnail" aria-hidden="true">
+          <span class="thumbnail-motif"></span>
+          <span class="thumbnail-label"></span>
+          <span class="thumbnail-initials"></span>
+        </div>
         <div class="card-topline">
           <p class="card-source"></p>
           <time class="card-date"></time>
@@ -215,12 +264,6 @@
         <p class="card-description"></p>
         <div class="card-actions">
           <a class="card-link">Read original</a>
-          <button class="brief-toggle" type="button" aria-expanded="false">Signal note</button>
-        </div>
-        <div class="inline-brief" hidden>
-          <p class="section-label">SignalLedger note</p>
-          <p class="inline-brief-summary"></p>
-          <ul class="inline-brief-points"></ul>
         </div>
       </article>
     </template>

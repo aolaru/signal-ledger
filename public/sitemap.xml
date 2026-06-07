@@ -1,21 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://getsignalledger.com/</loc>
+    <loc>https://kreativtools.com/</loc>
   </url>
   <url>
-    <loc>https://getsignalledger.com/about</loc>
+    <loc>https://kreativtools.com/about</loc>
   </url>
   <url>
-    <loc>https://getsignalledger.com/topic/markets</loc>
+    <loc>https://kreativtools.com/privacy</loc>
   </url>
   <url>
-    <loc>https://getsignalledger.com/topic/artificial-intelligence</loc>
+    <loc>https://kreativtools.com/terms</loc>
   </url>
   <url>
-    <loc>https://getsignalledger.com/topic/europe</loc>
+    <loc>https://kreativtools.com/contact</loc>
   </url>
   <url>
-    <loc>https://getsignalledger.com/topic/romania</loc>
+    <loc>https://kreativtools.com/topic/markets</loc>
+  </url>
+  <url>
+    <loc>https://kreativtools.com/topic/artificial-intelligence</loc>
+  </url>
+  <url>
+    <loc>https://kreativtools.com/topic/europe</loc>
+  </url>
+  <url>
+    <loc>https://kreativtools.com/topic/romania</loc>
   </url>
 </urlset>

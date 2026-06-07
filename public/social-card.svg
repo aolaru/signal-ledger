@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
-  <title id="title">SignalLedger social card</title>
-  <desc id="desc">Business, tech, markets, and world signal in one fast scan.</desc>
+  <title id="title">KreativTools social card</title>
+  <desc id="desc">Business, tech, markets, and regional signal in one fast scan.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#fbfcf9" />
@@ -25,13 +25,13 @@
     <path d="M1080 0V630" />
   </g>
   <rect x="70" y="64" width="74" height="74" rx="8" fill="#141817" />
-  <text x="107" y="112" text-anchor="middle" font-family="Space Grotesk, Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">SL</text>
-  <text x="184" y="109" font-family="Space Grotesk, Arial, sans-serif" font-size="32" font-weight="700" fill="#141817">SignalLedger</text>
+  <text x="107" y="112" text-anchor="middle" font-family="Space Grotesk, Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">KT</text>
+  <text x="184" y="109" font-family="Space Grotesk, Arial, sans-serif" font-size="32" font-weight="700" fill="#141817">KreativTools</text>
   <text x="70" y="230" font-family="Source Serif 4, Georgia, serif" font-size="74" font-weight="700" fill="#141817">Business, tech, markets,</text>
-  <text x="70" y="314" font-family="Source Serif 4, Georgia, serif" font-size="74" font-weight="700" fill="#141817">and world signal</text>
+  <text x="70" y="314" font-family="Source Serif 4, Georgia, serif" font-size="74" font-weight="700" fill="#141817">and regional signal</text>
   <text x="70" y="398" font-family="Source Serif 4, Georgia, serif" font-size="74" font-weight="700" fill="#141817">in one fast scan.</text>
   <text x="72" y="494" font-family="Space Grotesk, Arial, sans-serif" font-size="28" font-weight="500" fill="#4f5a55">
-    Direct publisher feeds first. Google News as fallback.
+    Original notes with direct publisher links.
   </text>
   <rect x="70" y="536" width="284" height="14" rx="7" fill="#0e6b58" opacity="0.86" />
   <rect x="364" y="536" width="184" height="14" rx="7" fill="#285f9f" opacity="0.8" />
