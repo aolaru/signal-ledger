@@ -104,8 +104,8 @@ describe("Worker API", () => {
     assert.equal(response.status, 200);
     assert.equal(body.markets.length, 6);
     assert.equal(body.sections.length, 6);
-    assert.equal(body.editorialBrief.title, "Today's operating brief");
-    assert.ok(body.editorialBrief.summary.includes("routing layer"));
+    assert.equal(body.editorialBrief.title, "What to scan first");
+    assert.ok(body.editorialBrief.summary.includes("Start with the lead story"));
     assert.ok(body.editorialBrief.signals.length >= 3);
     assert.equal(body.lead.source, "Reuters");
     assert.ok(body.lead.storyId);

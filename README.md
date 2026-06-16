@@ -1,6 +1,6 @@
 # KreativTools Briefing
 
-KreativTools is a small business briefing site that turns public RSS/source signals into a short original scan, fixed topic pages, and direct links back to the original publishers.
+KreativTools is a small business briefing site with a short homepage read, topic sections, and direct links to publisher articles.
 
 ## Local Workflow
 
@@ -11,21 +11,21 @@ KreativTools is a small business briefing site that turns public RSS/source sign
 
 ## Public Routes
 
-- `/` shows the latest KreativTools editorial brief and top cards.
-- `/topic/artificial-intelligence`, `/topic/markets`, `/topic/europe`, and `/topic/romania` are fixed topic pages.
+- `/` shows the latest homepage read and top cards.
+- `/topic/artificial-intelligence`, `/topic/markets`, `/topic/europe`, and `/topic/romania` cover the main sections.
 - `/about`, `/privacy`, `/terms`, and `/contact` are trust and compliance pages.
 - `/ads.txt`, `/robots.txt`, `/sitemap.xml`, `/favicon.svg`, and `/social-card.svg` are static public assets.
 
 ## Content Standard
 
-KreativTools should add value before it links out. Keep the homepage editorial brief original, keep cards short, avoid republishing full publisher text, and make the source link clear on every article card.
+KreativTools should help readers decide what to open next. Keep cards short, make source links clear, and avoid filling pages with repeated generic summaries.
 
 ## AdSense Checklist
 
 - Replace `pub-0000000000000000` in `public/ads.txt` with the real Google AdSense publisher ID.
 - Keep `/privacy`, `/terms`, and `/contact` reachable from the footer.
 - Do not put ad units on thin error states or empty pages.
-- Keep publisher ownership language visible because the reporting belongs to the original source.
+- Keep publisher links visible on every article card.
 - Apply for review only after the production domain serves the final sitemap, legal pages, and real `ads.txt`.
 
 ## Deployment Notes

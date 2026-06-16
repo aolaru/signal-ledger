@@ -27,8 +27,7 @@ const navLinks = document.querySelectorAll("[data-nav]");
 const apiVersion = "2026-05-31-compact-cards-v1";
 const siteUrl = "https://kreativtools.com";
 const siteName = "KreativTools";
-const defaultDescription =
-  "A focused business, technology, markets, and Europe briefing with original KreativTools editorial notes built from public source signals.";
+const defaultDescription = "A fast business briefing for markets, technology, Europe, and Romania.";
 const fixedTopics = [
   {
     topic: "artificial intelligence",
@@ -161,13 +160,13 @@ function getLegalRouteCopy(type) {
   const copy = {
     privacy: {
       title: `Privacy Policy | ${siteName}`,
-      description: "How KreativTools handles site data, public source links, analytics, advertising, and cookies.",
+      description: "How KreativTools handles site data, analytics, advertising, and cookies.",
       path: "/privacy",
       schemaType: "PrivacyPolicy",
     },
     terms: {
       title: `Terms of Use | ${siteName}`,
-      description: "Terms for using KreativTools briefings, source links, and market context.",
+      description: "Terms for using KreativTools briefings and market context.",
       path: "/terms",
       schemaType: "WebPage",
     },
@@ -273,7 +272,7 @@ function renderEditorialBrief(brief) {
 
   const label = document.createElement("p");
   label.className = "section-label";
-  label.textContent = "KreativTools editor's note";
+  label.textContent = "Start here";
 
   const title = document.createElement("h2");
   title.textContent = brief.title || "What matters today";
@@ -438,7 +437,7 @@ async function loadTodayBriefing() {
   updateActiveNavigation();
   setPageMeta(
     `${siteName} Briefing`,
-    "A concise KreativTools briefing of today's business, technology, markets, and Europe headlines.",
+    "A fast business briefing for markets, technology, Europe, and Romania.",
     {
       path: "/",
     },
@@ -447,7 +446,7 @@ async function loadTodayBriefing() {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: `${siteName} Briefing`,
-    description: "A concise KreativTools briefing of today's business, technology, markets, and Europe headlines.",
+    description: "A fast business briefing for markets, technology, Europe, and Romania.",
     url: getAbsoluteUrl("/"),
   });
   todaySummary.textContent = "Loading the latest briefing...";
@@ -477,7 +476,7 @@ function loadAbout() {
   updateActiveNavigation();
   setPageMeta(
     `About ${siteName}`,
-    "KreativTools is a business briefing for readers who want market, technology, and regional signal fast.",
+    "A quick way to scan the business day across markets, technology, Europe, and Romania.",
     {
       path: "/about",
     },
@@ -486,7 +485,7 @@ function loadAbout() {
     "@context": "https://schema.org",
     "@type": "AboutPage",
     name: `About ${siteName}`,
-    description: "KreativTools is a business briefing for readers who want market, technology, and regional signal fast.",
+    description: "A quick way to scan the business day across markets, technology, Europe, and Romania.",
     url: getAbsoluteUrl("/about"),
   });
 }

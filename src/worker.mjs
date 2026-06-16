@@ -634,25 +634,52 @@ function getStoryAngle(article, fallbackTopic) {
 }
 
 function buildBriefSummary(article, fallbackTopic) {
-  const angle = getStoryAngle(article, fallbackTopic);
-  const sourceNote =
-    article.clusterCount > 1
-      ? `${article.clusterCount} sources are tracking it.`
-      : `${article.source || "The source"} surfaced it.`;
+  const text = `${article.title || ""} ${article.feedSnippet || article.description || ""} ${fallbackTopic}`.toLowerCase();
+  const labels = [];
 
-  if (angle === "market positioning") {
-    return `Market signal: watch pricing, investor positioning, and risk appetite. ${sourceNote}`;
+  const addLabel = (label) => {
+    if (!labels.includes(label)) {
+      labels.push(label);
+    }
+  };
+
+  if (/(rate|fed|bond|yield|inflation)/.test(text)) {
+    addLabel("Rates");
   }
 
-  if (angle === "policy and geopolitical risk") {
-    return `Policy signal: watch exposure, supply chains, and capital flows. ${sourceNote}`;
+  if (/(earning|revenue|profit|stock|share|wall street|market)/.test(text)) {
+    addLabel("Markets");
   }
 
-  if (angle === "technology adoption and capital allocation") {
-    return `Tech signal: watch adoption, regulation, and capital allocation. ${sourceNote}`;
+  if (/(oil|gas|energy|gold|bitcoin|crypto)/.test(text)) {
+    addLabel("Commodities");
   }
 
-  return `Signal: a fresh datapoint for the ${fallbackTopic.toLowerCase()} agenda. ${sourceNote}`;
+  if (/(ai|artificial intelligence|chip|semiconductor|software|cloud)/.test(text)) {
+    addLabel("AI and tech");
+  }
+
+  if (/(startup|funding|venture|ipo|acquire|deal|merger)/.test(text)) {
+    addLabel("Deals");
+  }
+
+  if (/(tariff|trade|regulation|regulator|government|minister|election)/.test(text)) {
+    addLabel("Policy");
+  }
+
+  if (/(war|security|nato|russia|china|iran|ukraine)/.test(text)) {
+    addLabel("Geopolitics");
+  }
+
+  if (/(europe|eu\b|eurozone|brussels|romania|bucharest|cee)/.test(text)) {
+    addLabel("Europe");
+  }
+
+  if (!labels.length) {
+    addLabel(fallbackTopic.split(/\s+/).slice(0, 2).join(" ") || "Business");
+  }
+
+  return labels.slice(0, 2).join(" / ");
 }
 
 function buildArticle(item, topic, sourceFallback, provider) {
@@ -898,6 +925,10 @@ function joinPlainList(items = []) {
   return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 }
 
+function sentenceCase(value = "") {
+  return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : value;
+}
+
 function countSectionArticles(sectionData, key) {
   return sectionData.find((section) => section.key === key)?.articles.length || 0;
 }
@@ -911,35 +942,33 @@ function buildEditorialBrief(topStories = [], sectionData = []) {
 
   if (/(stock|market|earnings|investor|rates|inflation|oil|gold|bitcoin|crypto)/i.test(storyText) || countSectionArticles(sectionData, "markets") >= 3) {
     focusAreas.push("markets");
-    signals.push("Markets: use price and macro headlines as a triage cue, then verify the full context with the publisher.");
+    signals.push("Markets: prices, rates, earnings.");
   }
 
   if (/(ai|chip|software|startup|technology|app|semiconductor)/i.test(storyText) || countSectionArticles(sectionData, "tech") >= 3) {
     focusAreas.push("technology");
-    signals.push("Technology: separate launch noise from adoption, regulation, and capital-allocation signals.");
+    signals.push("Technology: adoption, chips, funding.");
   }
 
   if (/(war|tariff|sanction|election|government|minister|trade|geopolitic)/i.test(storyText) || countSectionArticles(sectionData, "world") >= 3) {
     focusAreas.push("policy risk");
-    signals.push("Policy: map geopolitical stories to supply-chain, demand, rates, and regulatory exposure.");
+    signals.push("Policy: trade, security, regulation.");
   }
 
   if (countSectionArticles(sectionData, "europe") || countSectionArticles(sectionData, "romania")) {
-    focusAreas.push("Europe and Romania");
-    signals.push("Regional watch: Europe and Romania cards are included when they add business, policy, or market context.");
+    focusAreas.push("regional coverage");
+    signals.push("Europe and Romania: companies, policy, capital.");
   }
 
-  signals.push("Source discipline: KreativTools gives a short original scan; the original publisher owns the reporting.");
-
   if (signals.length < 4) {
-    signals.push("Time filter: read the note, scan the lead, then open only the stories that change a decision.");
+    signals.push("Open only the items that affect your work.");
   }
 
   const focusSummary = focusAreas.length ? joinPlainList([...new Set(focusAreas)].slice(0, 4)) : "business signal";
 
   return {
-    title: "Today's operating brief",
-    summary: `The current scan is weighted toward ${focusSummary}. Use this page as a routing layer: identify what deserves deeper reading, then follow the original source for the full report.`,
+    title: "What to scan first",
+    summary: `${sentenceCase(focusSummary)} lead today's read. Start with the lead story, then open the items that affect your work.`,
     signals: signals.slice(0, 4),
   };
 }
@@ -1138,7 +1167,7 @@ function getReadiness() {
     {
       name: "Reader flow",
       status: "ready",
-      detail: "Briefing cards keep KreativTools editorial notes inline and send readers to the original publisher.",
+      detail: "Briefing cards stay short and link readers to the original publisher.",
     },
     {
       name: "Fixed topics",
